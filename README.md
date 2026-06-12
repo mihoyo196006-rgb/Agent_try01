@@ -7,7 +7,7 @@
 1. 把本目录推到一个 GitHub 仓库。
 2. 在 GitHub 仓库里进入 `Settings -> Secrets and variables -> Actions -> New repository secret`。
 3. 添加 secret：
-   - `FEISHU_APP_SECRET`: 飞书开放平台 App Secret
+   - `CLI_AAA0102E6A38DCFF`: 飞书开放平台 App Secret
 4. 到 `Actions` 页面启用 workflow。
 
 定时配置在 `.github/workflows/morning-feishu.yml`：
