@@ -6,10 +6,8 @@
 
 1. 把本目录推到一个 GitHub 仓库。
 2. 在 GitHub 仓库里进入 `Settings -> Secrets and variables -> Actions -> New repository secret`。
-3. 添加 secrets：
-   - `FEISHU_APP_ID`: 飞书开放平台 App ID
+3. 添加 secret：
    - `FEISHU_APP_SECRET`: 飞书开放平台 App Secret
-   - `FEISHU_USER_ID`: 接收消息的用户 open_id，例如 `ou_xxx`
 4. 到 `Actions` 页面启用 workflow。
 
 定时配置在 `.github/workflows/morning-feishu.yml`：
@@ -22,9 +20,9 @@
 PowerShell:
 
 ```powershell
-$env:FEISHU_APP_ID="cli_xxx"
+$env:FEISHU_APP_ID="cli_aaa0102e6a38dcff"
 $env:FEISHU_APP_SECRET="xxx"
-$env:FEISHU_USER_ID="ou_xxx"
+$env:FEISHU_USER_ID="ou_bcd723dafdadfc604e0b66b4e8bb9f32"
 python .\send_morning_plan.py
 ```
 

@@ -15,7 +15,7 @@ jobs:
           python-version: "3.12"
       - name: Send morning plan to Feishu
         env:
-          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_ID: cli_aaa0102e6a38dcff
           FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
-          FEISHU_USER_ID: ${{ secrets.FEISHU_USER_ID }}
+          FEISHU_USER_ID: ou_bcd723dafdadfc604e0b66b4e8bb9f32
         run: python send_morning_plan.py
