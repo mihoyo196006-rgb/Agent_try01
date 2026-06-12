@@ -1,18 +1,9 @@
-import base64
 import datetime as dt
-import hashlib
-import hmac
 import json
 import os
 import sys
 import urllib.error
 import urllib.request
-
-
-def sign(timestamp: str, secret: str) -> str:
-    string_to_sign = f"{timestamp}\n{secret}".encode("utf-8")
-    digest = hmac.new(string_to_sign, b"", digestmod=hashlib.sha256).digest()
-    return base64.b64encode(digest).decode("utf-8")
 
 
 def build_message() -> str:
@@ -55,36 +46,55 @@ def build_message() -> str:
     return "\n".join(lines)
 
 
-def main() -> int:
-    webhook = os.environ.get("FEISHU_WEBHOOK", "").strip()
-    if not webhook:
-        print("Missing FEISHU_WEBHOOK", file=sys.stderr)
-        return 2
-
-    payload = {
-        "msg_type": "text",
-        "content": {"text": build_message()},
-    }
-
-    secret = os.environ.get("FEISHU_SECRET", "").strip()
-    if secret:
-        timestamp = str(int(dt.datetime.now().timestamp()))
-        payload["timestamp"] = timestamp
-        payload["sign"] = sign(timestamp, secret)
-
+def post_json(url: str, payload: dict, token: str | None = None) -> dict:
+    headers = {"Content-Type": "application/json; charset=utf-8"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
     data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-    request = urllib.request.Request(
-        webhook,
-        data=data,
-        headers={"Content-Type": "application/json; charset=utf-8"},
-        method="POST",
+    request = urllib.request.Request(url, data=data, headers=headers, method="POST")
+    with urllib.request.urlopen(request, timeout=30) as response:
+        body = response.read().decode("utf-8", errors="replace")
+        result = json.loads(body) if body else {}
+        if response.status >= 400:
+            raise RuntimeError(body)
+        return result
+
+
+def get_tenant_access_token(app_id: str, app_secret: str) -> str:
+    result = post_json(
+        "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal",
+        {"app_id": app_id, "app_secret": app_secret},
+    )
+    if result.get("code") != 0:
+        raise RuntimeError(json.dumps(result, ensure_ascii=False))
+    return result["tenant_access_token"]
+
+
+def send_text(token: str, user_id: str, text: str) -> dict:
+    return post_json(
+        "https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=open_id",
+        {
+            "receive_id": user_id,
+            "msg_type": "text",
+            "content": json.dumps({"text": text}, ensure_ascii=False),
+        },
+        token=token,
     )
 
+
+def main() -> int:
+    app_id = os.environ.get("FEISHU_APP_ID", "").strip()
+    app_secret = os.environ.get("FEISHU_APP_SECRET", "").strip()
+    user_id = os.environ.get("FEISHU_USER_ID", "").strip()
+    if not app_id or not app_secret or not user_id:
+        print("Missing FEISHU_APP_ID, FEISHU_APP_SECRET, or FEISHU_USER_ID", file=sys.stderr)
+        return 2
+
     try:
-        with urllib.request.urlopen(request, timeout=30) as response:
-            body = response.read().decode("utf-8", errors="replace")
-            print(body)
-            return 0 if response.status < 400 else 1
+        token = get_tenant_access_token(app_id, app_secret)
+        result = send_text(token, user_id, build_message())
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result.get("code") == 0 else 1
     except urllib.error.HTTPError as exc:
         print(exc.read().decode("utf-8", errors="replace"), file=sys.stderr)
         return 1
