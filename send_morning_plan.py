@@ -1,49 +1,117 @@
 import datetime as dt
 import json
 import os
+from pathlib import Path
 import sys
 import urllib.error
 import urllib.request
 
 
-def build_message() -> str:
-    now = dt.datetime.utcnow() + dt.timedelta(hours=8)
-    date_text = now.strftime("%Y-%m-%d")
-    weekday = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"][now.weekday()]
-    extra = os.environ.get("TODAY_EXTRA", "").strip()
+DATA_DIR = Path(__file__).resolve().parent / "data"
+STALE_NOTICE = "未收到昨晚 Dayflow 新快照，以下基于最近一次快照和 PhD 主线生成。"
 
-    lines = [
-        f"【09:00 PhD 申请主线计划｜{date_text} {weekday}】",
-        "",
-        "今日默认主线：清华公管博士申请准备。",
-        "",
-        "今日 focus：",
-        "1. 推进一项可交付的 PhD 申请材料：研究计划、PS、CV、导师匹配或 writing sample。",
-        "2. 留出 2-3 小时深度工作块，不让零散事务挤掉主线。",
-        "3. 晚上做 5 分钟复盘：完成了什么、卡在哪里、明天第一件事是什么。",
-        "",
-        "建议时间块：",
-        "09:00-09:20 明确今日 PhD 申请最小交付物",
-        "09:20-11:50 PhD 深度工作：申请材料/研究计划/论文支撑材料",
-        "11:50-12:10 记录进展与下一步",
-        "14:00-15:30 文献、导师、项目或材料补充",
-        "15:40-16:30 行政沟通/邮件/资料整理",
-        "16:40-17:30 处理其他项目维护任务",
-        "21:30-21:40 今日复盘，锁定明早第一步",
-        "",
-        "需要你确认：本周 PhD 申请最必须完成的 1-3 件事是什么？",
-    ]
 
-    if extra:
-        lines.extend(["", f"今日补充：{extra}"])
+def beijing_now(now: dt.datetime | None = None) -> dt.datetime:
+    current = now or dt.datetime.now(dt.timezone.utc)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=dt.timezone.utc)
+    return current.astimezone(dt.timezone(dt.timedelta(hours=8)))
 
-    lines.extend(
+
+def load_json(path: Path, default: dict) -> dict:
+    if not path.exists():
+        return default
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def load_best_snapshot(dayflow_dir: Path, now: dt.datetime | None = None) -> dict:
+    expected_date = (beijing_now(now).date() - dt.timedelta(days=1)).isoformat()
+    default = {
+        "snapshot_date": "",
+        "source_status": "missing",
+        "counts": {"total": 0, "done": 0, "open": 0},
+        "done_tasks": [],
+        "open_tasks": [],
+    }
+    for name in [f"{expected_date}-0010.json", f"{expected_date}-2350.json", "latest.json"]:
+        path = dayflow_dir / name
+        if path.exists():
+            return json.loads(path.read_text(encoding="utf-8"))
+    return default
+
+
+def is_fresh_snapshot(snapshot: dict, now: dt.datetime | None = None) -> bool:
+    if snapshot.get("source_status") != "ok":
+        return False
+    expected_date = (beijing_now(now).date() - dt.timedelta(days=1)).isoformat()
+    return snapshot.get("snapshot_date") == expected_date
+
+
+def task_titles(tasks: list[dict], empty_text: str) -> str:
+    titles = [str(task.get("title", "")).strip() for task in tasks if str(task.get("title", "")).strip()]
+    return "；".join(titles) if titles else empty_text
+
+
+def infer_mainline_help(done_tasks: list[dict], phd: dict) -> str:
+    domains = {task.get("domain") for task in done_tasks}
+    paper_focus = phd.get("paper", {}).get("current_focus") or "论文修改与理论机制梳理"
+    english_focus = phd.get("english", {}).get("current_focus") or "英语输入、输出与表达积累"
+    parts = []
+    if "paper" in domains:
+        parts.append(f"论文方面，已完成任务推进了{paper_focus}。")
+    if "english" in domains:
+        parts.append(f"英语方面，已完成任务支持了{english_focus}。")
+    if not parts:
+        parts.append("今天完成的任务没有明显落在论文或英语标签上，明天规划会重新压回这两条主线。")
+    return "".join(parts)
+
+
+def build_messages(snapshot: dict, phd: dict, now: dt.datetime | None = None) -> list[str]:
+    bj_now = beijing_now(now)
+    today = bj_now.date().isoformat()
+    yesterday = snapshot.get("snapshot_date") or (bj_now.date() - dt.timedelta(days=1)).isoformat()
+    counts = snapshot.get("counts", {})
+    done_tasks = snapshot.get("done_tasks", [])
+    open_tasks = snapshot.get("open_tasks", [])
+    stale_prefix = f"{STALE_NOTICE}\n\n" if not is_fresh_snapshot(snapshot, now) else ""
+
+    summary = "\n".join(
         [
+            f"昨日总结｜{yesterday}",
             "",
-            "说明：这是云端 09:00 基础版提醒；本机 Codex 开机后可再补发基于本地项目进展的详细版。",
+            stale_prefix + "完成情况：",
+            f"Dayflow 记录 {counts.get('total', 0)} 项任务，完成 {counts.get('done', 0)} 项，未完成 {counts.get('open', 0)} 项。",
+            f"已完成：{task_titles(done_tasks, '暂无记录')}",
+            "",
+            "对主线的帮助：",
+            infer_mainline_help(done_tasks, phd),
         ]
     )
-    return "\n".join(lines)
+
+    plan = "\n".join(
+        [
+            f"今日规划｜{today}",
+            "",
+            stale_prefix + "09:30-10:30 论文：确认今天要推进的一处修改，写出最小可交付段落。",
+            "10:30-11:30 论文：补强理论机制或文献支撑。",
+            "11:30-12:30 英语：博士英语/雅思输入，记录可复用表达。",
+            "14:00-15:00 论文：继续修改结果解释或方法表述。",
+            "15:00-16:00 英语：写作或口语输出，并整理错题/表达。",
+            "16:00-17:00 论文：收束今日修改，记录明天第一步。",
+            "",
+            f"未完成可回收任务：{task_titles(open_tasks, '暂无')}",
+        ]
+    )
+    return [summary, plan]
+
+
+def load_inputs() -> tuple[dict, dict]:
+    snapshot = load_best_snapshot(DATA_DIR / "dayflow")
+    phd = load_json(
+        DATA_DIR / "phd" / "mainline.json",
+        {"mainlines": ["论文", "英语"], "paper": {}, "english": {}},
+    )
+    return snapshot, phd
 
 
 def post_json(url: str, payload: dict, token: str | None = None) -> dict:
@@ -92,9 +160,10 @@ def main() -> int:
 
     try:
         token = get_tenant_access_token(app_id, app_secret)
-        result = send_text(token, user_id, build_message())
-        print(json.dumps(result, ensure_ascii=False))
-        return 0 if result.get("code") == 0 else 1
+        snapshot, phd = load_inputs()
+        results = [send_text(token, user_id, message) for message in build_messages(snapshot, phd)]
+        print(json.dumps(results, ensure_ascii=False))
+        return 0 if all(result.get("code") == 0 for result in results) else 1
     except urllib.error.HTTPError as exc:
         print(exc.read().decode("utf-8", errors="replace"), file=sys.stderr)
         return 1

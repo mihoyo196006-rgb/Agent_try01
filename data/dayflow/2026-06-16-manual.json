@@ -1,0 +1,20 @@
+{
+  "snapshot_date": "2026-06-16",
+  "captured_at": "2026-06-16T00:37:02.097137+08:00",
+  "capture_kind": "manual",
+  "source_status": "ok",
+  "source_file": "C:\\Users\\HH\\AppData\\Roaming\\daily-task-widget\\Local Storage\\leveldb\\009075.log",
+  "error": "",
+  "freshness": {
+    "is_expected_window": false,
+    "age_hours_at_commit": 0
+  },
+  "counts": {
+    "total": 0,
+    "done": 0,
+    "open": 0
+  },
+  "done_tasks": [],
+  "open_tasks": [],
+  "matched_tasks": 78
+}
