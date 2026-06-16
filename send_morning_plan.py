@@ -9,6 +9,7 @@ import urllib.request
 
 DATA_DIR = Path(__file__).resolve().parent / "data"
 STALE_NOTICE = "未收到昨晚 Dayflow 新快照，以下基于最近一次快照和 PhD 主线生成。"
+DIVIDER = "━━━━━━━━━━━━"
 
 
 def beijing_now(now: dt.datetime | None = None) -> dt.datetime:
@@ -52,6 +53,13 @@ def task_titles(tasks: list[dict], empty_text: str) -> str:
     return "；".join(titles) if titles else empty_text
 
 
+def numbered_titles(tasks: list[dict], empty_text: str) -> list[str]:
+    titles = [str(task.get("title", "")).strip() for task in tasks if str(task.get("title", "")).strip()]
+    if not titles:
+        return [f"  - {empty_text}"]
+    return [f"  {index}. {title}" for index, title in enumerate(titles, 1)]
+
+
 def infer_mainline_help(done_tasks: list[dict], phd: dict) -> str:
     domains = {task.get("domain") for task in done_tasks}
     paper_done = sum(1 for task in done_tasks if task.get("domain") == "paper")
@@ -83,29 +91,38 @@ def build_messages(snapshot: dict, phd: dict, now: dt.datetime | None = None) ->
 
     summary = "\n".join(
         [
-            f"昨日总结｜{yesterday}",
+            f"📌 昨日总结｜{yesterday}",
+            DIVIDER,
+            *(["⚠️ 数据提醒", f"  {STALE_NOTICE}", ""] if stale_prefix else []),
+            "✅ 完成情况",
+            f"  Dayflow：共 {counts.get('total', 0)} 项｜完成 {counts.get('done', 0)} 项｜未完成 {counts.get('open', 0)} 项",
+            "  已完成：",
+            *numbered_titles(done_tasks, "暂无记录"),
             "",
-            stale_prefix + "完成情况：",
-            f"Dayflow 记录 {counts.get('total', 0)} 项任务，完成 {counts.get('done', 0)} 项，未完成 {counts.get('open', 0)} 项。",
-            f"已完成：{task_titles(done_tasks, '暂无记录')}",
-            "",
-            "对主线的帮助：",
-            infer_mainline_help(done_tasks, phd),
+            "🎯 对主线的帮助",
+            f"  {infer_mainline_help(done_tasks, phd)}",
         ]
     )
 
     plan = "\n".join(
         [
-            f"今日规划｜{today}",
+            f"📌 今日规划｜{today}",
+            DIVIDER,
+            *(["⚠️ 数据提醒", f"  {STALE_NOTICE}", ""] if stale_prefix else []),
+            "🧭 今日主线",
+            "  论文：推进一处可交付修改",
+            "  英语：完成一次输入或输出训练",
             "",
-            stale_prefix + "09:30-10:30 论文：确认今天要推进的一处修改，写出最小可交付段落。",
-            "10:30-11:30 论文：补强理论机制或文献支撑。",
-            "11:30-12:30 英语：博士英语/雅思输入，记录可复用表达。",
-            "14:00-15:00 论文：继续修改结果解释或方法表述。",
-            "15:00-16:00 英语：写作或口语输出，并整理错题/表达。",
-            "16:00-17:00 论文：收束今日修改，记录明天第一步。",
+            "🗓️ 时间安排",
+            "  09:30-10:30 论文｜确认今天要推进的一处修改，写出最小可交付段落",
+            "  10:30-11:30 论文｜补强理论机制或文献支撑",
+            "  11:30-12:30 英语｜博士英语/雅思输入，记录可复用表达",
+            "  14:00-15:00 论文｜继续修改结果解释或方法表述",
+            "  15:00-16:00 英语｜写作或口语输出，并整理错题/表达",
+            "  16:00-17:00 论文｜收束今日修改，记录明天第一步",
             "",
-            f"未完成可回收任务：{task_titles(open_tasks, '暂无')}",
+            "🔁 可回收任务",
+            f"  {task_titles(open_tasks, '暂无')}",
         ]
     )
     return [summary, plan]
