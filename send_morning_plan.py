@@ -9,7 +9,7 @@ import urllib.request
 
 DATA_DIR = Path(__file__).resolve().parent / "data"
 STALE_NOTICE = "未收到昨晚 Dayflow 新快照，以下基于最近一次快照和 PhD 主线生成。"
-DIVIDER = "━━━━━━━━━━━━"
+DIVIDER = "──────"
 
 
 def beijing_now(now: dt.datetime | None = None) -> dt.datetime:
@@ -95,7 +95,9 @@ def build_messages(snapshot: dict, phd: dict, now: dt.datetime | None = None) ->
             DIVIDER,
             *(["⚠️ 数据提醒", f"  {STALE_NOTICE}", ""] if stale_prefix else []),
             "✅ 完成情况",
-            f"  Dayflow：共 {counts.get('total', 0)} 项｜完成 {counts.get('done', 0)} 项｜未完成 {counts.get('open', 0)} 项",
+            f"  共计：{counts.get('total', 0)} 项",
+            f"  完成：{counts.get('done', 0)} 项",
+            f"  未完成：{counts.get('open', 0)} 项",
             "  已完成：",
             *numbered_titles(done_tasks, "暂无记录"),
             "",
