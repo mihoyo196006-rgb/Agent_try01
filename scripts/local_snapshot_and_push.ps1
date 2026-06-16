@@ -7,6 +7,8 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$OutputEncoding = [System.Text.UTF8Encoding]::new()
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
 
 $RepoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 Set-Location $RepoRoot
@@ -26,9 +28,16 @@ if ($TargetDate.Trim()) {
 }
 
 Write-Log "Starting Dayflow snapshot: captureKind=$CaptureKind targetDate=$TargetDate"
+$phdOutput = & $PythonPath "build_phd_mainline.py" "--write" 2>&1
+$phdExit = $LASTEXITCODE
+Write-Log "PhD summary exit=$phdExit output=data/phd/mainline.json"
+if ($phdExit -ne 0) {
+    Write-Log "PhD mainline summary failed; continuing with the last committed summary."
+}
+
 $pythonOutput = & $PythonPath @argsList 2>&1
 $pythonExit = $LASTEXITCODE
-$pythonOutput | Tee-Object -FilePath $LogFile -Append
+Write-Log "Dayflow snapshot exit=$pythonExit output=data/dayflow"
 if ($pythonExit -ne 0) {
     Write-Log "Dayflow read reported an error snapshot. Continuing so the cloud message can explain stale or missing data."
 }
@@ -42,7 +51,7 @@ if (-not $hasStagedChanges) {
 }
 
 if ($SkipPush) {
-    git reset -- data/dayflow/*.json data/phd/mainline.json
+    git reset -q -- data/dayflow/*.json data/phd/mainline.json
     Write-Log "SkipPush set; verified snapshot changes without committing or pushing."
     exit 0
 }

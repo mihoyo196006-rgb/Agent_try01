@@ -1,12 +1,58 @@
 {
-  "updated_at": "2026-06-16T23:50:00+08:00",
-  "mainlines": ["论文", "英语"],
+  "updated_at": "2026-06-16T22:25:40.530862+08:00",
+  "source_status": "ok",
+  "mainlines": [
+    "论文",
+    "英语"
+  ],
   "paper": {
     "current_focus": "论文修改与理论机制梳理",
-    "next_actions": ["推进一处可交付修改", "补强一条文献或机制链条"]
+    "next_actions": [
+      "推进一处可交付修改",
+      "补强一条文献或机制链条"
+    ],
+    "signal_count": 53
   },
   "english": {
     "current_focus": "博士申请相关英语能力准备",
-    "next_actions": ["输入训练", "写作或口语输出", "表达积累"]
-  }
+    "next_actions": [
+      "输入训练",
+      "写作或口语输出",
+      "表达积累"
+    ],
+    "signal_count": 78
+  },
+  "sources": [
+    {
+      "name": "README.md",
+      "status": "ok",
+      "modified_at": "2026-06-11T17:53:34.230976+08:00",
+      "size_bytes": 1596
+    },
+    {
+      "name": "00_申请总控.md",
+      "status": "ok",
+      "modified_at": "2026-05-30T23:58:36.172095+08:00",
+      "size_bytes": 4458
+    },
+    {
+      "name": "06_六月执行计划.md",
+      "status": "ok",
+      "modified_at": "2026-05-30T23:58:36.173148+08:00",
+      "size_bytes": 6715
+    },
+    {
+      "name": "07_每日进展记录.md",
+      "status": "ok",
+      "modified_at": "2026-06-09T12:48:13.881595+08:00",
+      "size_bytes": 2923
+    },
+    {
+      "name": "09_英语准备_雅思碰一碰优化材料_简版.md",
+      "status": "ok",
+      "modified_at": "2026-06-11T17:54:41.310156+08:00",
+      "size_bytes": 1363
+    }
+  ],
+  "privacy_note": "Only file names, mtimes, sizes, and keyword counts are uploaded; source text is not uploaded."
 }

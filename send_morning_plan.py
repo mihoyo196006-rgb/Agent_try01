@@ -54,13 +54,19 @@ def task_titles(tasks: list[dict], empty_text: str) -> str:
 
 def infer_mainline_help(done_tasks: list[dict], phd: dict) -> str:
     domains = {task.get("domain") for task in done_tasks}
+    paper_done = sum(1 for task in done_tasks if task.get("domain") == "paper")
+    english_done = sum(1 for task in done_tasks if task.get("domain") == "english")
     paper_focus = phd.get("paper", {}).get("current_focus") or "论文修改与理论机制梳理"
     english_focus = phd.get("english", {}).get("current_focus") or "英语输入、输出与表达积累"
+    paper_signal = phd.get("paper", {}).get("signal_count")
+    english_signal = phd.get("english", {}).get("signal_count")
     parts = []
     if "paper" in domains:
-        parts.append(f"论文方面，已完成任务推进了{paper_focus}。")
+        signal_text = f"；当前 PhD 摘要中论文信号 {paper_signal} 条" if isinstance(paper_signal, int) else ""
+        parts.append(f"论文任务完成 {paper_done} 项，推进了{paper_focus}{signal_text}。")
     if "english" in domains:
-        parts.append(f"英语方面，已完成任务支持了{english_focus}。")
+        signal_text = f"；当前 PhD 摘要中英语信号 {english_signal} 条" if isinstance(english_signal, int) else ""
+        parts.append(f"英语任务完成 {english_done} 项，支持了{english_focus}{signal_text}。")
     if not parts:
         parts.append("今天完成的任务没有明显落在论文或英语标签上，明天规划会重新压回这两条主线。")
     return "".join(parts)

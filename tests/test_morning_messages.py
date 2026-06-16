@@ -31,6 +31,8 @@ class MorningMessageTests(unittest.TestCase):
         self.assertIn("完成情况：", messages[0])
         self.assertIn("对主线的帮助：", messages[0])
         self.assertIn("修改论文引言", messages[0])
+        self.assertIn("论文任务完成 1 项", messages[0])
+        self.assertIn("英语任务完成 1 项", messages[0])
         self.assertTrue(messages[1].startswith("今日规划｜2026-06-17"))
         self.assertIn("09:30-10:30 论文", messages[1])
         self.assertIn("英语", messages[1])
