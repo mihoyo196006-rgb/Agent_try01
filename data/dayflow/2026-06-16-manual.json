@@ -1,9 +1,9 @@
 {
   "snapshot_date": "2026-06-16",
-  "captured_at": "2026-06-16T00:37:02.097137+08:00",
+  "captured_at": "2026-06-16T22:20:27.867947+08:00",
   "capture_kind": "manual",
   "source_status": "ok",
-  "source_file": "C:\\Users\\HH\\AppData\\Roaming\\daily-task-widget\\Local Storage\\leveldb\\009075.log",
+  "source_file": "009134.log",
   "error": "",
   "freshness": {
     "is_expected_window": false,
