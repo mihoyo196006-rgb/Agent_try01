@@ -1,9 +1,9 @@
 {
   "snapshot_date": "2026-06-16",
-  "captured_at": "2026-06-16T23:00:31.208921+08:00",
+  "captured_at": "2026-06-16T23:50:03.453810+08:00",
   "capture_kind": "main",
   "source_status": "ok",
-  "source_file": "009224.log",
+  "source_file": "009337.log",
   "error": "",
   "freshness": {
     "is_expected_window": true,
