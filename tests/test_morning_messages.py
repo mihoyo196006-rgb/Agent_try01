@@ -55,7 +55,7 @@ class MorningMessageTests(unittest.TestCase):
         self.assertIn("未收到昨晚 Dayflow 新快照", messages[0])
         self.assertIn("未收到昨晚 Dayflow 新快照", messages[1])
 
-    def test_load_best_snapshot_prefers_yesterday_supplement_then_main_then_latest(self):
+    def test_load_best_snapshot_prefers_yesterday_main_over_empty_supplement(self):
         class FakePath:
             def __init__(self, files):
                 self.files = files
@@ -75,14 +75,27 @@ class MorningMessageTests(unittest.TestCase):
                 return self.files[self.name]
 
         files = {
-            "2026-06-16-2350.json": json.dumps({"snapshot_date": "2026-06-16", "capture_kind": "main"}),
-            "2026-06-16-0010.json": json.dumps({"snapshot_date": "2026-06-16", "capture_kind": "supplement"}),
+            "2026-06-16-2350.json": json.dumps(
+                {
+                    "snapshot_date": "2026-06-16",
+                    "capture_kind": "main",
+                    "counts": {"total": 2, "done": 1, "open": 1},
+                }
+            ),
+            "2026-06-16-0010.json": json.dumps(
+                {
+                    "snapshot_date": "2026-06-16",
+                    "capture_kind": "supplement",
+                    "counts": {"total": 0, "done": 0, "open": 0},
+                }
+            ),
             "latest.json": json.dumps({"snapshot_date": "2026-06-17", "capture_kind": "manual"}),
         }
 
         snapshot = load_best_snapshot(FakePath(files), now=datetime(2026, 6, 17, 1, 30, tzinfo=timezone.utc))
 
-        self.assertEqual(snapshot["capture_kind"], "supplement")
+        self.assertEqual(snapshot["capture_kind"], "main")
+        self.assertEqual(snapshot["counts"]["total"], 2)
 
 
 if __name__ == "__main__":

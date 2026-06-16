@@ -72,18 +72,23 @@ def classify_domain(title: str, existing_domain: str = "") -> str:
     return "other"
 
 
-def task_occurs_on(task: dict, target_date: str) -> bool:
+def task_occurs_on(task: dict, target_date: str, *, include_today_list: bool = True) -> bool:
     date = task.get("date") or ""
     date_end = task.get("dateEnd") or ""
-    if task.get("list") == "today":
+    if include_today_list and task.get("list") == "today":
         return True
     return bool(date and date <= target_date and (date_end or date) >= target_date)
 
 
-def compact_task(task: dict) -> dict:
+def compact_task(task: dict, *, redact_titles: bool = True) -> dict:
+    domain = classify_domain(task["title"], task.get("domain", ""))
+    if redact_titles:
+        title = {"paper": "论文任务", "english": "英语任务"}.get(domain, "其他任务")
+    else:
+        title = task["title"]
     return {
-        "title": task["title"],
-        "domain": classify_domain(task["title"], task.get("domain", "")),
+        "title": title,
+        "domain": domain,
         "priority": task.get("priority", ""),
     }
 
@@ -97,10 +102,16 @@ def build_compact_snapshot(
     source_status: str,
     source_file: str = "",
     error: str = "",
+    redact_titles: bool = True,
 ) -> dict:
-    active = [task for task in tasks if not task.get("deleted") and task_occurs_on(task, target_date)]
-    done = [compact_task(task) for task in active if task.get("done")]
-    open_tasks = [compact_task(task) for task in active if not task.get("done")]
+    include_today_list = capture_kind != "supplement"
+    active = [
+        task
+        for task in tasks
+        if not task.get("deleted") and task_occurs_on(task, target_date, include_today_list=include_today_list)
+    ]
+    done = [compact_task(task, redact_titles=redact_titles) for task in active if task.get("done")]
+    open_tasks = [compact_task(task, redact_titles=redact_titles) for task in active if not task.get("done")]
     return {
         "snapshot_date": target_date,
         "captured_at": captured_at.isoformat(),
@@ -193,6 +204,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--target-date", default="")
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT_DIR)
     parser.add_argument("--write", action="store_true")
+    parser.add_argument("--include-task-titles", action="store_true")
     return parser.parse_args()
 
 
@@ -209,7 +221,8 @@ def main() -> int:
             captured_at=now,
             capture_kind=args.capture_kind,
             source_status="ok",
-            source_file=str(source),
+            source_file=source.name,
+            redact_titles=not args.include_task_titles,
         )
         payload["matched_tasks"] = len(tasks)
         if args.write:
@@ -225,8 +238,9 @@ def main() -> int:
             source_status="error",
             source_file="",
             error=str(exc),
+            redact_titles=True,
         )
-        payload["source_dir"] = str(LEVELDB_DIR)
+        payload["source_dir"] = "local_dayflow_leveldb"
         if args.write:
             payload["written_files"] = [str(path) for path in write_snapshot(payload, args.out_dir)]
         print(json.dumps(payload, ensure_ascii=False, indent=2))
