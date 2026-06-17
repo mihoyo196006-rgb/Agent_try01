@@ -160,6 +160,8 @@ def beijing_now() -> datetime:
 def default_target_date(capture_kind: str, now: datetime) -> str:
     if capture_kind == "supplement":
         return (now.date() - timedelta(days=1)).isoformat()
+    if capture_kind == "main" and now.hour < 4:
+        return (now.date() - timedelta(days=1)).isoformat()
     return now.date().isoformat()
 
 

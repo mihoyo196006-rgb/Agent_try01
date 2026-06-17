@@ -1,7 +1,7 @@
 from datetime import datetime
 import unittest
 
-from read_dayflow_state import build_compact_snapshot, classify_domain
+from read_dayflow_state import build_compact_snapshot, classify_domain, default_target_date
 
 
 class DayflowSnapshotTests(unittest.TestCase):
@@ -136,6 +136,12 @@ class DayflowSnapshotTests(unittest.TestCase):
         )
 
         self.assertEqual(snapshot["counts"], {"total": 0, "done": 0, "open": 0})
+
+    def test_main_snapshot_defaults_to_yesterday_when_it_runs_after_midnight(self):
+        self.assertEqual(default_target_date("main", datetime(2026, 6, 17, 0, 30)), "2026-06-16")
+        self.assertEqual(default_target_date("main", datetime(2026, 6, 17, 3, 59)), "2026-06-16")
+        self.assertEqual(default_target_date("main", datetime(2026, 6, 16, 23, 50)), "2026-06-16")
+        self.assertEqual(default_target_date("main", datetime(2026, 6, 17, 4, 0)), "2026-06-17")
 
 
 if __name__ == "__main__":
