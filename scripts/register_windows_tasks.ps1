@@ -16,7 +16,7 @@ function Register-DayflowTask {
         [string]$CaptureKind
     )
 
-    $argument = "-NoProfile -ExecutionPolicy Bypass -File `"$SnapshotScript`" -CaptureKind $CaptureKind -PythonPath `"$PythonPath`""
+    $argument = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$SnapshotScript`" -CaptureKind $CaptureKind -PythonPath `"$PythonPath`""
     $action = New-ScheduledTaskAction -Execute $PowerShell -Argument $argument -WorkingDirectory $RepoRoot
     $trigger = New-ScheduledTaskTrigger -Daily -At $Time
     $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Minutes 20)
