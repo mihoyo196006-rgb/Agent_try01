@@ -2,6 +2,11 @@ name: Morning Feishu Plan
 
 on:
   schedule:
+    - cron: "30 20 * * *"
+    - cron: "30 21 * * *"
+    - cron: "30 22 * * *"
+    - cron: "30 23 * * *"
+    - cron: "30 0 * * *"
     - cron: "30 1 * * *"
   workflow_dispatch:
 
@@ -13,6 +18,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Print GitHub schedule diagnostics
+        run: |
+          echo "event=${GITHUB_EVENT_NAME}"
+          echo "sha=${GITHUB_SHA}"
+          echo "utc_now=$(date -u --iso-8601=seconds)"
+          TZ=Asia/Shanghai date +"beijing_now=%Y-%m-%dT%H:%M:%S%z"
       - name: Run tests
         run: python -m unittest discover -s tests -v
       - name: Send morning plan to Feishu
@@ -20,4 +31,5 @@ jobs:
           FEISHU_APP_ID: cli_aaa0102e6a38dcff
           FEISHU_APP_SECRET: ${{ secrets.CLI_AAA0102E6A38DCFF }}
           FEISHU_USER_ID: ou_bcd723dafdadfc604e0b66b4e8bb9f32
+          REQUIRE_BEIJING_SEND_WINDOW: ${{ github.event_name == 'schedule' && '1' || '0' }}
         run: python send_morning_plan.py

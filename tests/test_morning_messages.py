@@ -2,7 +2,13 @@ from datetime import datetime, timezone
 import json
 import unittest
 
-from send_morning_plan import build_messages, load_best_snapshot
+from send_morning_plan import (
+    build_message_url,
+    build_message_uuids,
+    build_messages,
+    is_beijing_send_window,
+    load_best_snapshot,
+)
 
 
 class MorningMessageTests(unittest.TestCase):
@@ -116,6 +122,26 @@ class MorningMessageTests(unittest.TestCase):
 
         self.assertEqual(snapshot["capture_kind"], "main")
         self.assertEqual(snapshot["counts"]["total"], 2)
+
+    def test_beijing_send_window_accepts_only_morning_calibration_window(self):
+        self.assertTrue(is_beijing_send_window(datetime(2026, 6, 17, 1, 30, tzinfo=timezone.utc)))
+        self.assertTrue(is_beijing_send_window(datetime(2026, 6, 17, 1, 50, tzinfo=timezone.utc)))
+        self.assertFalse(is_beijing_send_window(datetime(2026, 6, 17, 1, 10, tzinfo=timezone.utc)))
+        self.assertFalse(is_beijing_send_window(datetime(2026, 6, 17, 2, 1, tzinfo=timezone.utc)))
+
+    def test_message_uuids_are_stable_per_beijing_date_and_message_index(self):
+        uuids = build_message_uuids(datetime(2026, 6, 17, 1, 30, tzinfo=timezone.utc), 2)
+
+        self.assertEqual(uuids, ["morning-feishu-2026-06-17-1", "morning-feishu-2026-06-17-2"])
+        self.assertLessEqual(max(len(value) for value in uuids), 64)
+
+    def test_build_message_url_adds_uuid_when_present(self):
+        url = build_message_url("morning-feishu-2026-06-17-1")
+
+        self.assertEqual(
+            url,
+            "https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=open_id&uuid=morning-feishu-2026-06-17-1",
+        )
 
 
 if __name__ == "__main__":

@@ -4,12 +4,15 @@ import os
 from pathlib import Path
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 
 
 DATA_DIR = Path(__file__).resolve().parent / "data"
 STALE_NOTICE = "未收到昨晚 Dayflow 新快照，以下基于最近一次快照和 PhD 主线生成。"
 DIVIDER = "──────"
+SEND_WINDOW_START = dt.time(9, 20)
+SEND_WINDOW_END = dt.time(10, 0)
 
 
 def beijing_now(now: dt.datetime | None = None) -> dt.datetime:
@@ -17,6 +20,23 @@ def beijing_now(now: dt.datetime | None = None) -> dt.datetime:
     if current.tzinfo is None:
         current = current.replace(tzinfo=dt.timezone.utc)
     return current.astimezone(dt.timezone(dt.timedelta(hours=8)))
+
+
+def is_beijing_send_window(now: dt.datetime | None = None) -> bool:
+    current_time = beijing_now(now).time()
+    return SEND_WINDOW_START <= current_time <= SEND_WINDOW_END
+
+
+def build_message_uuids(now: dt.datetime | None, count: int) -> list[str]:
+    today = beijing_now(now).date().isoformat()
+    return [f"morning-feishu-{today}-{index}" for index in range(1, count + 1)]
+
+
+def build_message_url(message_uuid: str | None = None) -> str:
+    url = "https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=open_id"
+    if message_uuid:
+        url += "&uuid=" + urllib.parse.quote(message_uuid, safe="")
+    return url
 
 
 def load_json(path: Path, default: dict) -> dict:
@@ -165,9 +185,9 @@ def get_tenant_access_token(app_id: str, app_secret: str) -> str:
     return result["tenant_access_token"]
 
 
-def send_text(token: str, user_id: str, text: str) -> dict:
+def send_text(token: str, user_id: str, text: str, message_uuid: str | None = None) -> dict:
     return post_json(
-        "https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=open_id",
+        build_message_url(message_uuid),
         {
             "receive_id": user_id,
             "msg_type": "text",
@@ -186,9 +206,21 @@ def main() -> int:
         return 2
 
     try:
+        now = dt.datetime.now(dt.timezone.utc)
+        bj_now = beijing_now(now)
+        print(f"UTC now: {now.isoformat()}")
+        print(f"Beijing now: {bj_now.isoformat()}")
+        print(f"GitHub event: {os.environ.get('GITHUB_EVENT_NAME', '')}")
+        print(f"GitHub sha: {os.environ.get('GITHUB_SHA', '')}")
+        if os.environ.get("REQUIRE_BEIJING_SEND_WINDOW", "").strip() == "1" and not is_beijing_send_window(now):
+            print("Outside Beijing send window; skip Feishu delivery for calibration run.")
+            return 0
+
         token = get_tenant_access_token(app_id, app_secret)
         snapshot, phd = load_inputs()
-        results = [send_text(token, user_id, message) for message in build_messages(snapshot, phd)]
+        messages = build_messages(snapshot, phd, now=now)
+        uuids = build_message_uuids(now, len(messages))
+        results = [send_text(token, user_id, message, message_uuid) for message, message_uuid in zip(messages, uuids)]
         print(json.dumps(results, ensure_ascii=False))
         return 0 if all(result.get("code") == 0 for result in results) else 1
     except urllib.error.HTTPError as exc:
