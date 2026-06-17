@@ -75,7 +75,7 @@ def classify_domain(title: str, existing_domain: str = "") -> str:
 def task_occurs_on(task: dict, target_date: str, *, include_today_list: bool = True) -> bool:
     date = task.get("date") or ""
     date_end = task.get("dateEnd") or ""
-    if include_today_list and task.get("list") == "today":
+    if include_today_list and task.get("list") == "today" and (not date or date == target_date):
         return True
     return bool(date and date <= target_date and (date_end or date) >= target_date)
 
@@ -101,6 +101,7 @@ def build_compact_snapshot(
     capture_kind: str,
     source_status: str,
     source_file: str = "",
+    source_modified_at: datetime | None = None,
     error: str = "",
     redact_titles: bool = True,
 ) -> dict:
@@ -112,17 +113,21 @@ def build_compact_snapshot(
     ]
     done = [compact_task(task, redact_titles=redact_titles) for task in active if task.get("done")]
     open_tasks = [compact_task(task, redact_titles=redact_titles) for task in active if not task.get("done")]
-    return {
+    freshness = {
+        "is_expected_window": capture_kind in {"main", "supplement"},
+        "age_hours_at_commit": 0,
+    }
+    if source_modified_at:
+        freshness["cache_age_minutes"] = max(0, int((captured_at - source_modified_at).total_seconds() // 60))
+
+    snapshot = {
         "snapshot_date": target_date,
         "captured_at": captured_at.isoformat(),
         "capture_kind": capture_kind,
         "source_status": source_status,
         "source_file": source_file,
         "error": error,
-        "freshness": {
-            "is_expected_window": capture_kind in {"main", "supplement"},
-            "age_hours_at_commit": 0,
-        },
+        "freshness": freshness,
         "counts": {
             "total": len(active),
             "done": len(done),
@@ -131,6 +136,9 @@ def build_compact_snapshot(
         "done_tasks": done,
         "open_tasks": open_tasks,
     }
+    if source_modified_at:
+        snapshot["source_modified_at"] = source_modified_at.isoformat()
+    return snapshot
 
 
 def write_snapshot(snapshot: dict, out_dir: Path) -> list[Path]:
@@ -222,6 +230,7 @@ def main() -> int:
             capture_kind=args.capture_kind,
             source_status="ok",
             source_file=source.name,
+            source_modified_at=datetime.fromtimestamp(source.stat().st_mtime, tz=now.tzinfo),
             redact_titles=not args.include_task_titles,
         )
         payload["matched_tasks"] = len(tasks)

@@ -42,11 +42,14 @@ class DayflowSnapshotTests(unittest.TestCase):
             capture_kind="main",
             source_status="ok",
             source_file="state.ldb",
+            source_modified_at=datetime(2026, 6, 16, 23, 49),
         )
 
         self.assertEqual(snapshot["snapshot_date"], "2026-06-16")
         self.assertEqual(snapshot["capture_kind"], "main")
         self.assertEqual(snapshot["counts"], {"total": 2, "done": 1, "open": 1})
+        self.assertEqual(snapshot["source_modified_at"], "2026-06-16T23:49:00")
+        self.assertEqual(snapshot["freshness"]["cache_age_minutes"], 1)
         self.assertEqual(snapshot["done_tasks"], [{"title": "论文任务", "domain": "paper", "priority": "high"}])
         self.assertEqual(snapshot["open_tasks"], [{"title": "英语任务", "domain": "english", "priority": "medium"}])
         self.assertNotIn("note", snapshot["done_tasks"][0])
@@ -108,6 +111,31 @@ class DayflowSnapshotTests(unittest.TestCase):
 
         self.assertEqual(snapshot["counts"], {"total": 0, "done": 0, "open": 0})
         self.assertEqual(snapshot["open_tasks"], [])
+
+    def test_main_snapshot_does_not_treat_new_dated_today_as_yesterday(self):
+        tasks = [
+            {
+                "title": "今天的新任务",
+                "date": "2026-06-17",
+                "dateEnd": "",
+                "list": "today",
+                "domain": "",
+                "priority": "medium",
+                "done": False,
+                "deleted": False,
+            }
+        ]
+
+        snapshot = build_compact_snapshot(
+            tasks,
+            target_date="2026-06-16",
+            captured_at=datetime(2026, 6, 17, 10, 50),
+            capture_kind="main",
+            source_status="ok",
+            source_file="state.ldb",
+        )
+
+        self.assertEqual(snapshot["counts"], {"total": 0, "done": 0, "open": 0})
 
 
 if __name__ == "__main__":

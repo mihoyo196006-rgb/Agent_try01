@@ -1,5 +1,6 @@
 param(
-    [string]$PythonPath = "C:\Users\HH\.local\bin\python.cmd"
+    [string]$PythonPath = "C:\Users\HH\.local\bin\python.cmd",
+    [string]$DayflowExe = "D:\try\dist\win-unpacked\DayFlow.exe"
 )
 
 $ErrorActionPreference = "Stop"
@@ -26,3 +27,14 @@ function Register-DayflowTask {
 
 Register-DayflowTask -Name "DayflowFeishuSnapshot2350" -Time "23:50" -CaptureKind "main"
 Register-DayflowTask -Name "DayflowFeishuSnapshot0010" -Time "00:10" -CaptureKind "supplement"
+
+if (Test-Path -LiteralPath $DayflowExe) {
+    $warmupAction = New-ScheduledTaskAction -Execute $DayflowExe -WorkingDirectory (Split-Path -Parent $DayflowExe)
+    $warmupTrigger = New-ScheduledTaskTrigger -Daily -At "23:30"
+    $warmupSettings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Minutes 15)
+
+    Register-ScheduledTask -TaskName "DayflowFeishuWarmup2330" -Action $warmupAction -Trigger $warmupTrigger -Settings $warmupSettings -Description "Warm up DayFlow before the 23:50 Feishu snapshot" -Force | Out-Null
+    Write-Host "Registered DayflowFeishuWarmup2330 at 23:30"
+} else {
+    Write-Warning "DayFlow executable not found: $DayflowExe"
+}
