@@ -10,6 +10,9 @@ on:
     - cron: "30 1 * * *"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   send:
     runs-on: ubuntu-latest
@@ -25,7 +28,11 @@ jobs:
           echo "utc_now=$(date -u --iso-8601=seconds)"
           TZ=Asia/Shanghai date +"beijing_now=%Y-%m-%dT%H:%M:%S%z"
       - name: Run tests
+        if: github.event_name != 'schedule'
         run: python -m unittest discover -s tests -v
+      - name: Run lightweight scheduled check
+        if: github.event_name == 'schedule'
+        run: python -m py_compile send_morning_plan.py read_dayflow_state.py build_phd_mainline.py
       - name: Send morning plan to Feishu
         env:
           FEISHU_APP_ID: cli_aaa0102e6a38dcff
@@ -33,3 +40,15 @@ jobs:
           FEISHU_USER_ID: ou_bcd723dafdadfc604e0b66b4e8bb9f32
           REQUIRE_BEIJING_SEND_WINDOW: ${{ github.event_name == 'schedule' && '1' || '0' }}
         run: python send_morning_plan.py
+      - name: Commit delivery marker
+        if: success()
+        run: |
+          if ls data/delivery/*.json >/dev/null 2>&1; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add data/delivery/*.json
+            if ! git diff --cached --quiet; then
+              git commit -m "Record Feishu delivery"
+              git push
+            fi
+          fi

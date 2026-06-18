@@ -146,11 +146,9 @@ def write_snapshot(snapshot: dict, out_dir: Path) -> list[Path]:
     date_text = snapshot["snapshot_date"]
     suffix = {"main": "2350", "supplement": "0010"}.get(snapshot["capture_kind"], "manual")
     dated_path = out_dir / f"{date_text}-{suffix}.json"
-    latest_path = out_dir / "latest.json"
     text = json.dumps(snapshot, ensure_ascii=False, indent=2) + "\n"
     dated_path.write_text(text, encoding="utf-8")
-    latest_path.write_text(text, encoding="utf-8")
-    return [dated_path, latest_path]
+    return [dated_path]
 
 
 def beijing_now() -> datetime:

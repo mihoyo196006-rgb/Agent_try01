@@ -3,6 +3,7 @@ import json
 import unittest
 
 from send_morning_plan import (
+    build_delivery_marker,
     build_message_url,
     build_message_uuids,
     build_messages,
@@ -41,7 +42,10 @@ class MorningMessageTests(unittest.TestCase):
         self.assertIn("  完成：2 项", messages[0])
         self.assertIn("  未完成：1 项", messages[0])
         self.assertNotIn("Dayflow：共 3 项｜完成 2 项｜未完成 1 项", messages[0])
-        self.assertIn("修改论文引言", messages[0])
+        self.assertIn("  已完成：", messages[0])
+        self.assertIn("  - 论文：1 项", messages[0])
+        self.assertIn("  - 英语：1 项", messages[0])
+        self.assertNotIn("修改论文引言", messages[0])
         self.assertIn("论文任务完成 1 项", messages[0])
         self.assertIn("英语任务完成 1 项", messages[0])
         self.assertTrue(messages[1].startswith("📌 今日规划｜2026-06-17"))
@@ -163,8 +167,9 @@ class MorningMessageTests(unittest.TestCase):
         self.assertTrue(is_beijing_send_window(datetime(2026, 6, 17, 1, 50, tzinfo=timezone.utc)))
         self.assertTrue(is_beijing_send_window(datetime(2026, 6, 17, 2, 0, 4, tzinfo=timezone.utc)))
         self.assertTrue(is_beijing_send_window(datetime(2026, 6, 17, 2, 15, tzinfo=timezone.utc)))
+        self.assertTrue(is_beijing_send_window(datetime(2026, 6, 17, 2, 30, tzinfo=timezone.utc)))
         self.assertFalse(is_beijing_send_window(datetime(2026, 6, 17, 1, 10, tzinfo=timezone.utc)))
-        self.assertFalse(is_beijing_send_window(datetime(2026, 6, 17, 2, 16, tzinfo=timezone.utc)))
+        self.assertFalse(is_beijing_send_window(datetime(2026, 6, 17, 2, 31, tzinfo=timezone.utc)))
 
     def test_message_uuids_are_stable_per_beijing_date_and_message_index(self):
         uuids = build_message_uuids(datetime(2026, 6, 17, 1, 30, tzinfo=timezone.utc), 2)
@@ -179,6 +184,32 @@ class MorningMessageTests(unittest.TestCase):
             url,
             "https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=open_id&uuid=morning-feishu-2026-06-17-1",
         )
+
+    def test_build_delivery_marker_records_successful_send(self):
+        snapshot = {
+            "snapshot_date": "2026-06-16",
+            "capture_kind": "main",
+            "counts": {"total": 3, "done": 2, "open": 1},
+            "source_file": "010577.log",
+            "source_modified_at": "2026-06-16T23:49:41+08:00",
+        }
+        results = [
+            {"code": 0, "data": {"message_id": "om_1"}},
+            {"code": 0, "data": {"message_id": "om_2"}},
+        ]
+
+        marker = build_delivery_marker(
+            snapshot,
+            results,
+            now=datetime(2026, 6, 17, 2, 0, 4, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual(marker["date"], "2026-06-17")
+        self.assertEqual(marker["sent_at_beijing"], "2026-06-17T10:00:04+08:00")
+        self.assertEqual(marker["snapshot_date"], "2026-06-16")
+        self.assertEqual(marker["counts"], {"total": 3, "done": 2, "open": 1})
+        self.assertEqual(marker["message_ids"], ["om_1", "om_2"])
+        self.assertEqual(marker["status"], "sent")
 
 
 if __name__ == "__main__":

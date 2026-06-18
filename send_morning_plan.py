@@ -9,10 +9,12 @@ import urllib.request
 
 
 DATA_DIR = Path(__file__).resolve().parent / "data"
+DELIVERY_DIR = DATA_DIR / "delivery"
 STALE_NOTICE = "未收到昨晚 Dayflow 新快照，以下基于最近一次快照和 PhD 主线生成。"
 DIVIDER = "──────"
 SEND_WINDOW_START = dt.time(9, 20)
-SEND_WINDOW_END = dt.time(10, 15, 59)
+SEND_WINDOW_END = dt.time(10, 30, 59)
+DOMAIN_LABELS = {"paper": "论文", "english": "英语", "other": "其他"}
 
 
 def beijing_now(now: dt.datetime | None = None) -> dt.datetime:
@@ -67,16 +69,19 @@ def is_fresh_snapshot(snapshot: dict, now: dt.datetime | None = None) -> bool:
     return snapshot.get("snapshot_date") == expected_date
 
 
-def task_titles(tasks: list[dict], empty_text: str) -> str:
-    titles = [str(task.get("title", "")).strip() for task in tasks if str(task.get("title", "")).strip()]
-    return "；".join(titles) if titles else empty_text
+def aggregate_domains(tasks: list[dict]) -> dict[str, int]:
+    counts = {"paper": 0, "english": 0, "other": 0}
+    for task in tasks:
+        domain = task.get("domain") if task.get("domain") in counts else "other"
+        counts[domain] += 1
+    return {domain: count for domain, count in counts.items() if count}
 
 
-def numbered_titles(tasks: list[dict], empty_text: str) -> list[str]:
-    titles = [str(task.get("title", "")).strip() for task in tasks if str(task.get("title", "")).strip()]
-    if not titles:
+def domain_summary_lines(tasks: list[dict], empty_text: str) -> list[str]:
+    counts = aggregate_domains(tasks)
+    if not counts:
         return [f"  - {empty_text}"]
-    return [f"  {index}. {title}" for index, title in enumerate(titles, 1)]
+    return [f"  - {DOMAIN_LABELS[domain]}：{count} 项" for domain, count in counts.items()]
 
 
 def infer_mainline_help(done_tasks: list[dict], phd: dict) -> str:
@@ -118,7 +123,7 @@ def build_messages(snapshot: dict, phd: dict, now: dt.datetime | None = None) ->
             f"  完成：{counts.get('done', 0)} 项",
             f"  未完成：{counts.get('open', 0)} 项",
             "  已完成：",
-            *numbered_titles(done_tasks, "暂无记录"),
+            *domain_summary_lines(done_tasks, "暂无记录"),
             "",
             "🎯 对主线的帮助",
             f"  {infer_mainline_help(done_tasks, phd)}",
@@ -145,10 +150,32 @@ def build_messages(snapshot: dict, phd: dict, now: dt.datetime | None = None) ->
             "  23:00-00:30 可选｜论文/文献阅读",
             "",
             "🔁 可回收任务",
-            f"  {task_titles(open_tasks, '暂无')}",
+            *domain_summary_lines(open_tasks, "暂无"),
         ]
     )
     return [summary, plan]
+
+
+def build_delivery_marker(snapshot: dict, results: list[dict], now: dt.datetime | None = None) -> dict:
+    bj_now = beijing_now(now)
+    return {
+        "date": bj_now.date().isoformat(),
+        "sent_at_beijing": bj_now.isoformat(timespec="seconds"),
+        "status": "sent",
+        "snapshot_date": snapshot.get("snapshot_date", ""),
+        "snapshot_capture_kind": snapshot.get("capture_kind", ""),
+        "counts": snapshot.get("counts", {}),
+        "source_file": snapshot.get("source_file", ""),
+        "source_modified_at": snapshot.get("source_modified_at", ""),
+        "message_ids": [str(result.get("data", {}).get("message_id", "")) for result in results],
+    }
+
+
+def write_delivery_marker(marker: dict, delivery_dir: Path = DELIVERY_DIR) -> Path:
+    delivery_dir.mkdir(parents=True, exist_ok=True)
+    path = delivery_dir / f"{marker['date']}.json"
+    path.write_text(json.dumps(marker, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return path
 
 
 def load_inputs() -> tuple[dict, dict]:
@@ -221,7 +248,11 @@ def main() -> int:
         uuids = build_message_uuids(now, len(messages))
         results = [send_text(token, user_id, message, message_uuid) for message, message_uuid in zip(messages, uuids)]
         print(json.dumps(results, ensure_ascii=False))
-        return 0 if all(result.get("code") == 0 for result in results) else 1
+        if all(result.get("code") == 0 for result in results):
+            marker_path = write_delivery_marker(build_delivery_marker(snapshot, results, now=now))
+            print(f"Delivery marker: {marker_path}")
+            return 0
+        return 1
     except urllib.error.HTTPError as exc:
         print(exc.read().decode("utf-8", errors="replace"), file=sys.stderr)
         return 1
