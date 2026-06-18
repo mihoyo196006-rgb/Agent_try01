@@ -54,10 +54,9 @@ def load_best_snapshot(dayflow_dir: Path, now: dt.datetime | None = None) -> dic
         "done_tasks": [],
         "open_tasks": [],
     }
-    for name in [f"{expected_date}-2350.json", f"{expected_date}-0010.json", "latest.json"]:
-        path = dayflow_dir / name
-        if path.exists():
-            return json.loads(path.read_text(encoding="utf-8"))
+    path = dayflow_dir / f"{expected_date}-2350.json"
+    if path.exists():
+        return json.loads(path.read_text(encoding="utf-8"))
     return default
 
 

@@ -81,7 +81,7 @@ class MorningMessageTests(unittest.TestCase):
         self.assertIn("未收到昨晚 Dayflow 新快照", messages[0])
         self.assertIn("未收到昨晚 Dayflow 新快照", messages[1])
 
-    def test_load_best_snapshot_prefers_yesterday_main_over_empty_supplement(self):
+    def test_load_best_snapshot_uses_yesterday_main_snapshot_only(self):
         class FakePath:
             def __init__(self, files):
                 self.files = files
@@ -112,7 +112,7 @@ class MorningMessageTests(unittest.TestCase):
                 {
                     "snapshot_date": "2026-06-16",
                     "capture_kind": "supplement",
-                    "counts": {"total": 0, "done": 0, "open": 0},
+                    "counts": {"total": 9, "done": 9, "open": 0},
                 }
             ),
             "latest.json": json.dumps({"snapshot_date": "2026-06-17", "capture_kind": "manual"}),
@@ -122,6 +122,41 @@ class MorningMessageTests(unittest.TestCase):
 
         self.assertEqual(snapshot["capture_kind"], "main")
         self.assertEqual(snapshot["counts"]["total"], 2)
+
+    def test_load_best_snapshot_ignores_old_supplement_without_main_snapshot(self):
+        class FakePath:
+            def __init__(self, files):
+                self.files = files
+
+            def __truediv__(self, child):
+                return FakePathFile(self.files, child)
+
+        class FakePathFile:
+            def __init__(self, files, name):
+                self.files = files
+                self.name = name
+
+            def exists(self):
+                return self.name in self.files
+
+            def read_text(self, encoding):
+                return self.files[self.name]
+
+        files = {
+            "2026-06-16-0010.json": json.dumps(
+                {
+                    "snapshot_date": "2026-06-16",
+                    "capture_kind": "supplement",
+                    "counts": {"total": 9, "done": 9, "open": 0},
+                }
+            ),
+            "latest.json": json.dumps({"snapshot_date": "2026-06-17", "capture_kind": "manual"}),
+        }
+
+        snapshot = load_best_snapshot(FakePath(files), now=datetime(2026, 6, 17, 1, 30, tzinfo=timezone.utc))
+
+        self.assertEqual(snapshot["source_status"], "missing")
+        self.assertEqual(snapshot["counts"]["total"], 0)
 
     def test_beijing_send_window_accepts_only_morning_calibration_window(self):
         self.assertTrue(is_beijing_send_window(datetime(2026, 6, 17, 1, 30, tzinfo=timezone.utc)))

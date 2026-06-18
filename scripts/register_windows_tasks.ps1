@@ -26,7 +26,8 @@ function Register-DayflowTask {
 }
 
 Register-DayflowTask -Name "DayflowFeishuSnapshot2350" -Time "23:50" -CaptureKind "main"
-Register-DayflowTask -Name "DayflowFeishuSnapshot0010" -Time "00:10" -CaptureKind "supplement"
+Unregister-ScheduledTask -TaskName "DayflowFeishuSnapshot0010" -Confirm:$false -ErrorAction SilentlyContinue
+Write-Host "Removed DayflowFeishuSnapshot0010 if it existed"
 
 if (Test-Path -LiteralPath $DayflowExe) {
     $warmupAction = New-ScheduledTaskAction -Execute $DayflowExe -WorkingDirectory (Split-Path -Parent $DayflowExe)
