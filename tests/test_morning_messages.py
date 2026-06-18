@@ -126,8 +126,10 @@ class MorningMessageTests(unittest.TestCase):
     def test_beijing_send_window_accepts_only_morning_calibration_window(self):
         self.assertTrue(is_beijing_send_window(datetime(2026, 6, 17, 1, 30, tzinfo=timezone.utc)))
         self.assertTrue(is_beijing_send_window(datetime(2026, 6, 17, 1, 50, tzinfo=timezone.utc)))
+        self.assertTrue(is_beijing_send_window(datetime(2026, 6, 17, 2, 0, 4, tzinfo=timezone.utc)))
+        self.assertTrue(is_beijing_send_window(datetime(2026, 6, 17, 2, 15, tzinfo=timezone.utc)))
         self.assertFalse(is_beijing_send_window(datetime(2026, 6, 17, 1, 10, tzinfo=timezone.utc)))
-        self.assertFalse(is_beijing_send_window(datetime(2026, 6, 17, 2, 1, tzinfo=timezone.utc)))
+        self.assertFalse(is_beijing_send_window(datetime(2026, 6, 17, 2, 16, tzinfo=timezone.utc)))
 
     def test_message_uuids_are_stable_per_beijing_date_and_message_index(self):
         uuids = build_message_uuids(datetime(2026, 6, 17, 1, 30, tzinfo=timezone.utc), 2)

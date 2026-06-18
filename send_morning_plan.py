@@ -12,7 +12,7 @@ DATA_DIR = Path(__file__).resolve().parent / "data"
 STALE_NOTICE = "未收到昨晚 Dayflow 新快照，以下基于最近一次快照和 PhD 主线生成。"
 DIVIDER = "──────"
 SEND_WINDOW_START = dt.time(9, 20)
-SEND_WINDOW_END = dt.time(10, 0)
+SEND_WINDOW_END = dt.time(10, 15, 59)
 
 
 def beijing_now(now: dt.datetime | None = None) -> dt.datetime:
