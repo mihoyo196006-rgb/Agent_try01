@@ -1,0 +1,18 @@
+{
+  "date": "2026-06-19",
+  "sent_at_beijing": "2026-06-19T10:14:09+08:00",
+  "status": "sent",
+  "snapshot_date": "",
+  "snapshot_capture_kind": "",
+  "counts": {
+    "total": 0,
+    "done": 0,
+    "open": 0
+  },
+  "source_file": "",
+  "source_modified_at": "",
+  "message_ids": [
+    "om_x100b6c7e11e7d4a8c39fc5cca2783be",
+    "om_x100b6c7e11fbc0acc247582354d6c91"
+  ]
+}
