@@ -84,16 +84,6 @@ def domain_summary_lines(tasks: list[dict], empty_text: str) -> list[str]:
     return [f"  - {DOMAIN_LABELS[domain]}：{count} 项" for domain, count in counts.items()]
 
 
-def snapshot_status_lines(snapshot: dict) -> list[str]:
-    capture_kind = snapshot.get("capture_kind", "")
-    capture_label = {"main": "23:50 主快照", "manual": "手动快照"}.get(capture_kind, capture_kind or "未收到")
-    lines = [f"  快照：{capture_label}"]
-    cache_age = snapshot.get("freshness", {}).get("cache_age_minutes")
-    if isinstance(cache_age, int):
-        lines.append(f"  缓存：快照前 {cache_age} 分钟刷新")
-    return lines
-
-
 def infer_mainline_help(done_tasks: list[dict], phd: dict) -> str:
     domains = {task.get("domain") for task in done_tasks}
     paper_done = sum(1 for task in done_tasks if task.get("domain") == "paper")
@@ -116,25 +106,14 @@ def infer_mainline_help(done_tasks: list[dict], phd: dict) -> str:
 
 def build_messages(snapshot: dict, phd: dict, now: dt.datetime | None = None) -> list[str]:
     bj_now = beijing_now(now)
-    today = bj_now.date().isoformat()
     yesterday = snapshot.get("snapshot_date") or (bj_now.date() - dt.timedelta(days=1)).isoformat()
     counts = snapshot.get("counts", {})
     done_tasks = snapshot.get("done_tasks", [])
-    open_tasks = snapshot.get("open_tasks", [])
     stale_prefix = f"{STALE_NOTICE}\n\n" if not is_fresh_snapshot(snapshot, now) else ""
 
-    reminder = "\n".join(
+    summary = "\n".join(
         [
-            f"📌 早晨提醒｜{today}",
-            DIVIDER,
             *(["⚠️ 数据提醒", f"  {STALE_NOTICE}", ""] if stale_prefix else []),
-            "⏰ 时间定位",
-            "  目标：09:30",
-            f"  实际：{bj_now.strftime('%H:%M')}",
-            "",
-            "📍 数据状态",
-            *snapshot_status_lines(snapshot),
-            "",
             f"🧾 昨日总结｜{yesterday}",
             "",
             "✅ Dayflow",
@@ -146,15 +125,9 @@ def build_messages(snapshot: dict, phd: dict, now: dt.datetime | None = None) ->
             "",
             "🎯 对主线的帮助",
             f"  {infer_mainline_help(done_tasks, phd)}",
-            "",
-            "🔁 昨日未完成",
-            *domain_summary_lines(open_tasks, "暂无"),
-            "",
-            "📝 今日任务",
-            "  请你自己制定；我这里只做昨日复盘和早晨提醒。",
         ]
     )
-    return [reminder]
+    return [summary]
 
 
 def build_delivery_marker(snapshot: dict, results: list[dict], now: dt.datetime | None = None) -> dict:
