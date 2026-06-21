@@ -18,6 +18,9 @@ class MorningMessageTests(unittest.TestCase):
             "snapshot_date": "2026-06-16",
             "captured_at": "2026-06-16T23:50:00+08:00",
             "source_status": "ok",
+            "capture_kind": "main",
+            "source_modified_at": "2026-06-16T23:49:41+08:00",
+            "freshness": {"cache_age_minutes": 1},
             "counts": {"total": 3, "done": 2, "open": 1},
             "done_tasks": [
                 {"title": "修改论文引言", "domain": "paper", "priority": "high"},
@@ -33,9 +36,17 @@ class MorningMessageTests(unittest.TestCase):
 
         messages = build_messages(snapshot, phd, now=datetime(2026, 6, 17, 1, 30, tzinfo=timezone.utc))
 
-        self.assertEqual(len(messages), 2)
-        self.assertTrue(messages[0].startswith("📌 昨日总结｜2026-06-16"))
-        self.assertIn("✅ 完成情况", messages[0])
+        self.assertEqual(len(messages), 1)
+        self.assertTrue(messages[0].startswith("📌 早晨提醒｜2026-06-17"))
+        self.assertIn("🧾 昨日总结｜2026-06-16", messages[0])
+        self.assertIn("⏰ 时间定位", messages[0])
+        self.assertIn("  目标：09:30", messages[0])
+        self.assertIn("  实际：09:30", messages[0])
+        self.assertIn("📍 数据状态", messages[0])
+        self.assertIn("  快照：23:50 主快照", messages[0])
+        self.assertIn("  缓存：快照前 1 分钟刷新", messages[0])
+        self.assertNotIn("2026-06-16T23:49:41+08:00", messages[0])
+        self.assertIn("✅ Dayflow", messages[0])
         self.assertIn("🎯 对主线的帮助", messages[0])
         self.assertIn("──────", messages[0])
         self.assertIn("  共计：3 项", messages[0])
@@ -48,26 +59,16 @@ class MorningMessageTests(unittest.TestCase):
         self.assertNotIn("修改论文引言", messages[0])
         self.assertIn("论文任务完成 1 项", messages[0])
         self.assertIn("英语任务完成 1 项", messages[0])
-        self.assertTrue(messages[1].startswith("📌 今日规划｜2026-06-17"))
-        self.assertIn("🧭 今日主线", messages[1])
-        self.assertIn("🗓️ 时间安排", messages[1])
-        self.assertIn("09:30-10:30 论文", messages[1])
-        self.assertIn("10:30-11:30 论文（文献阅读）", messages[1])
-        self.assertIn("11:30-12:30 英语", messages[1])
-        self.assertIn("14:00-15:00 英语（雅思）", messages[1])
-        self.assertIn("15:00-16:00 论文（文献阅读）", messages[1])
-        self.assertIn("16:00-17:00 论文（文献阅读）", messages[1])
-        self.assertIn("17:00-18:00 论文", messages[1])
-        self.assertIn("23:00-00:30 可选｜论文/文献阅读", messages[1])
-        self.assertIn("英语", messages[1])
+        self.assertIn("📝 今日任务", messages[0])
+        self.assertIn("请你自己制定", messages[0])
+        self.assertNotIn("今日规划", messages[0])
+        self.assertNotIn("09:30-10:30", messages[0])
         self.assertNotIn("【格式测试】", messages[0])
-        self.assertNotIn("【格式测试】", messages[1])
         self.assertNotIn("*", messages[0])
-        self.assertNotIn("*", messages[1])
-        self.assertNotIn("材料", messages[1])
-        self.assertNotIn("导师", messages[1])
-        self.assertNotIn("行政", messages[1])
-        self.assertNotIn("缓冲", messages[1])
+        self.assertNotIn("材料", messages[0])
+        self.assertNotIn("导师", messages[0])
+        self.assertNotIn("行政", messages[0])
+        self.assertNotIn("缓冲", messages[0])
 
     def test_build_messages_marks_stale_snapshot(self):
         snapshot = {
@@ -83,7 +84,6 @@ class MorningMessageTests(unittest.TestCase):
         messages = build_messages(snapshot, phd, now=datetime(2026, 6, 17, 1, 30, tzinfo=timezone.utc))
 
         self.assertIn("未收到昨晚 Dayflow 新快照", messages[0])
-        self.assertIn("未收到昨晚 Dayflow 新快照", messages[1])
 
     def test_load_best_snapshot_uses_yesterday_main_snapshot_only(self):
         class FakePath:
@@ -168,6 +168,7 @@ class MorningMessageTests(unittest.TestCase):
         self.assertTrue(is_beijing_send_window(datetime(2026, 6, 17, 2, 0, 4, tzinfo=timezone.utc)))
         self.assertTrue(is_beijing_send_window(datetime(2026, 6, 17, 2, 15, tzinfo=timezone.utc)))
         self.assertTrue(is_beijing_send_window(datetime(2026, 6, 17, 2, 30, tzinfo=timezone.utc)))
+        self.assertFalse(is_beijing_send_window(datetime(2026, 6, 17, 1, 29, 59, tzinfo=timezone.utc)))
         self.assertFalse(is_beijing_send_window(datetime(2026, 6, 17, 1, 10, tzinfo=timezone.utc)))
         self.assertFalse(is_beijing_send_window(datetime(2026, 6, 17, 2, 31, tzinfo=timezone.utc)))
 

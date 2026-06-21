@@ -12,7 +12,7 @@ DATA_DIR = Path(__file__).resolve().parent / "data"
 DELIVERY_DIR = DATA_DIR / "delivery"
 STALE_NOTICE = "未收到昨晚 Dayflow 新快照，以下基于最近一次快照和 PhD 主线生成。"
 DIVIDER = "──────"
-SEND_WINDOW_START = dt.time(9, 20)
+SEND_WINDOW_START = dt.time(9, 30)
 SEND_WINDOW_END = dt.time(10, 30, 59)
 DOMAIN_LABELS = {"paper": "论文", "english": "英语", "other": "其他"}
 
@@ -84,6 +84,16 @@ def domain_summary_lines(tasks: list[dict], empty_text: str) -> list[str]:
     return [f"  - {DOMAIN_LABELS[domain]}：{count} 项" for domain, count in counts.items()]
 
 
+def snapshot_status_lines(snapshot: dict) -> list[str]:
+    capture_kind = snapshot.get("capture_kind", "")
+    capture_label = {"main": "23:50 主快照", "manual": "手动快照"}.get(capture_kind, capture_kind or "未收到")
+    lines = [f"  快照：{capture_label}"]
+    cache_age = snapshot.get("freshness", {}).get("cache_age_minutes")
+    if isinstance(cache_age, int):
+        lines.append(f"  缓存：快照前 {cache_age} 分钟刷新")
+    return lines
+
+
 def infer_mainline_help(done_tasks: list[dict], phd: dict) -> str:
     domains = {task.get("domain") for task in done_tasks}
     paper_done = sum(1 for task in done_tasks if task.get("domain") == "paper")
@@ -100,7 +110,7 @@ def infer_mainline_help(done_tasks: list[dict], phd: dict) -> str:
         signal_text = f"；当前 PhD 摘要中英语信号 {english_signal} 条" if isinstance(english_signal, int) else ""
         parts.append(f"英语任务完成 {english_done} 项，支持了{english_focus}{signal_text}。")
     if not parts:
-        parts.append("今天完成的任务没有明显落在论文或英语标签上，明天规划会重新压回这两条主线。")
+        parts.append("昨天完成的任务没有明显落在论文或英语标签上；今天制定任务时可以主动压回论文和英语。")
     return "".join(parts)
 
 
@@ -113,12 +123,21 @@ def build_messages(snapshot: dict, phd: dict, now: dt.datetime | None = None) ->
     open_tasks = snapshot.get("open_tasks", [])
     stale_prefix = f"{STALE_NOTICE}\n\n" if not is_fresh_snapshot(snapshot, now) else ""
 
-    summary = "\n".join(
+    reminder = "\n".join(
         [
-            f"📌 昨日总结｜{yesterday}",
+            f"📌 早晨提醒｜{today}",
             DIVIDER,
             *(["⚠️ 数据提醒", f"  {STALE_NOTICE}", ""] if stale_prefix else []),
-            "✅ 完成情况",
+            "⏰ 时间定位",
+            "  目标：09:30",
+            f"  实际：{bj_now.strftime('%H:%M')}",
+            "",
+            "📍 数据状态",
+            *snapshot_status_lines(snapshot),
+            "",
+            f"🧾 昨日总结｜{yesterday}",
+            "",
+            "✅ Dayflow",
             f"  共计：{counts.get('total', 0)} 项",
             f"  完成：{counts.get('done', 0)} 项",
             f"  未完成：{counts.get('open', 0)} 项",
@@ -127,33 +146,15 @@ def build_messages(snapshot: dict, phd: dict, now: dt.datetime | None = None) ->
             "",
             "🎯 对主线的帮助",
             f"  {infer_mainline_help(done_tasks, phd)}",
-        ]
-    )
-
-    plan = "\n".join(
-        [
-            f"📌 今日规划｜{today}",
-            DIVIDER,
-            *(["⚠️ 数据提醒", f"  {STALE_NOTICE}", ""] if stale_prefix else []),
-            "🧭 今日主线",
-            "  论文：推进一处可交付修改",
-            "  英语：完成一次输入或输出训练",
             "",
-            "🗓️ 时间安排",
-            "  09:30-10:30 论文｜确认今天要推进的一处修改，写出最小可交付段落",
-            "  10:30-11:30 论文（文献阅读）｜补强理论机制或文献支撑",
-            "  11:30-12:30 英语｜输入训练，记录可复用表达",
-            "  14:00-15:00 英语（雅思）｜听力/阅读/写作择一推进",
-            "  15:00-16:00 论文（文献阅读）｜围绕论文问题读一篇核心文献",
-            "  16:00-17:00 论文（文献阅读）｜整理文献中的机制、变量或论证",
-            "  17:00-18:00 论文｜整理今日改动，列出明天第一步",
-            "  23:00-00:30 可选｜论文/文献阅读",
-            "",
-            "🔁 可回收任务",
+            "🔁 昨日未完成",
             *domain_summary_lines(open_tasks, "暂无"),
+            "",
+            "📝 今日任务",
+            "  请你自己制定；我这里只做昨日复盘和早晨提醒。",
         ]
     )
-    return [summary, plan]
+    return [reminder]
 
 
 def build_delivery_marker(snapshot: dict, results: list[dict], now: dt.datetime | None = None) -> dict:
