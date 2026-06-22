@@ -1,0 +1,49 @@
+{
+  "snapshot_date": "2026-06-22",
+  "captured_at": "2026-06-22T23:50:04.851356+08:00",
+  "capture_kind": "main",
+  "source_status": "ok",
+  "source_file": "013575.log",
+  "error": "",
+  "freshness": {
+    "is_expected_window": true,
+    "age_hours_at_commit": 0,
+    "cache_age_minutes": 5
+  },
+  "counts": {
+    "total": 5,
+    "done": 3,
+    "open": 2
+  },
+  "done_tasks": [
+    {
+      "title": "论文任务",
+      "domain": "paper",
+      "priority": "normal"
+    },
+    {
+      "title": "英语任务",
+      "domain": "english",
+      "priority": "normal"
+    },
+    {
+      "title": "其他任务",
+      "domain": "other",
+      "priority": "normal"
+    }
+  ],
+  "open_tasks": [
+    {
+      "title": "论文任务",
+      "domain": "paper",
+      "priority": "normal"
+    },
+    {
+      "title": "其他任务",
+      "domain": "other",
+      "priority": "normal"
+    }
+  ],
+  "source_modified_at": "2026-06-22T23:45:02.243436+08:00",
+  "matched_tasks": 115
+}
