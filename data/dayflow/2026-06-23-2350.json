@@ -1,0 +1,22 @@
+{
+  "snapshot_date": "2026-06-23",
+  "captured_at": "2026-06-23T23:50:05.208373+08:00",
+  "capture_kind": "main",
+  "source_status": "ok",
+  "source_file": "014544.log",
+  "error": "",
+  "freshness": {
+    "is_expected_window": true,
+    "age_hours_at_commit": 0,
+    "cache_age_minutes": 0
+  },
+  "counts": {
+    "total": 0,
+    "done": 0,
+    "open": 0
+  },
+  "done_tasks": [],
+  "open_tasks": [],
+  "source_modified_at": "2026-06-23T23:49:48.621555+08:00",
+  "matched_tasks": 117
+}
