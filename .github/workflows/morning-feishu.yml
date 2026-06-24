@@ -34,8 +34,11 @@ jobs:
         run: |
           echo "event=${GITHUB_EVENT_NAME}"
           echo "sha=${GITHUB_SHA}"
+          echo "dayflow_target_date=${DAYFLOW_TARGET_DATE:-<default-yesterday>}"
           echo "utc_now=$(date -u --iso-8601=seconds)"
           TZ=Asia/Shanghai date +"beijing_now=%Y-%m-%dT%H:%M:%S%z"
+        env:
+          DAYFLOW_TARGET_DATE: ${{ github.event.inputs.target_date }}
       - name: Run tests
         if: github.event_name != 'schedule'
         run: python -m unittest discover -s tests -v
@@ -52,7 +55,7 @@ jobs:
           FEISHU_USER_ID: ou_bcd723dafdadfc604e0b66b4e8bb9f32
           DAYFLOW_CLOUD_ENDPOINT: ${{ secrets.DAYFLOW_CLOUD_ENDPOINT }}
           DAYFLOW_READ_TOKEN: ${{ secrets.DAYFLOW_READ_TOKEN }}
-          DAYFLOW_TARGET_DATE: ${{ inputs.target_date }}
+          DAYFLOW_TARGET_DATE: ${{ github.event.inputs.target_date }}
           MESSAGE_UUID_SUFFIX: ${{ github.event_name == 'workflow_dispatch' && github.run_id || '' }}
           REQUIRE_BEIJING_SEND_WINDOW: ${{ github.event_name == 'schedule' && '1' || '0' }}
         run: python send_morning_plan.py
