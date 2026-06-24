@@ -10,6 +10,7 @@ from send_morning_plan import (
     build_message_url,
     build_message_uuids,
     build_messages,
+    expected_snapshot_date,
     is_beijing_send_window,
     load_best_snapshot,
     load_cloud_snapshot,
@@ -250,6 +251,18 @@ class MorningMessageTests(unittest.TestCase):
 
         self.assertEqual(snapshot, cloud_snapshot)
         self.assertEqual(captured["target_date"], "2026-06-24")
+
+    def test_manual_dispatch_defaults_to_today_when_no_target_date_is_set(self):
+        with patch.dict(os.environ, {"GITHUB_EVENT_NAME": "workflow_dispatch"}, clear=False):
+            target = expected_snapshot_date(datetime(2026, 6, 24, 15, 30, tzinfo=timezone.utc))
+
+        self.assertEqual(target, "2026-06-24")
+
+    def test_schedule_defaults_to_yesterday_when_no_target_date_is_set(self):
+        with patch.dict(os.environ, {"GITHUB_EVENT_NAME": "schedule"}, clear=False):
+            target = expected_snapshot_date(datetime(2026, 6, 24, 15, 30, tzinfo=timezone.utc))
+
+        self.assertEqual(target, "2026-06-23")
 
     def test_beijing_send_window_accepts_only_morning_calibration_window(self):
         self.assertTrue(is_beijing_send_window(datetime(2026, 6, 17, 1, 30, tzinfo=timezone.utc)))

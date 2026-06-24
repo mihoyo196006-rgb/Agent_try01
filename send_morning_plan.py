@@ -33,6 +33,8 @@ def expected_snapshot_date(now: dt.datetime | None = None) -> str:
     override = os.environ.get("DAYFLOW_TARGET_DATE", "").strip()
     if override:
         return override
+    if os.environ.get("GITHUB_EVENT_NAME", "").strip() == "workflow_dispatch":
+        return beijing_now(now).date().isoformat()
     return (beijing_now(now).date() - dt.timedelta(days=1)).isoformat()
 
 
