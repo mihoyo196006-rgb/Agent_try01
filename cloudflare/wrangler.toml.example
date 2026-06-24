@@ -1,0 +1,7 @@
+name = "dayflow-cloud-sync"
+main = "dayflow-worker.mjs"
+compatibility_date = "2026-06-24"
+
+[[kv_namespaces]]
+binding = "DAYFLOW_KV"
+id = "replace_with_cloudflare_kv_namespace_id"

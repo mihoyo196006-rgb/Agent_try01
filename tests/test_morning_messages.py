@@ -1,6 +1,9 @@
 from datetime import datetime, timezone
+import io
 import json
+import os
 import unittest
+from unittest.mock import patch
 
 from send_morning_plan import (
     build_delivery_marker,
@@ -9,6 +12,8 @@ from send_morning_plan import (
     build_messages,
     is_beijing_send_window,
     load_best_snapshot,
+    load_cloud_snapshot,
+    load_inputs,
 )
 
 
@@ -157,6 +162,66 @@ class MorningMessageTests(unittest.TestCase):
 
         self.assertEqual(snapshot["source_status"], "missing")
         self.assertEqual(snapshot["counts"]["total"], 0)
+
+    def test_load_cloud_snapshot_uses_bearer_token(self):
+        class FakeResponse:
+            status = 200
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def read(self):
+                return json.dumps(
+                    {
+                        "snapshot_date": "2026-06-16",
+                        "source_status": "ok",
+                        "counts": {"total": 1, "done": 1, "open": 0},
+                        "done_tasks": [{"title": "论文任务", "domain": "paper", "priority": "high"}],
+                        "open_tasks": [],
+                    }
+                ).encode("utf-8")
+
+        captured = {}
+
+        def fake_urlopen(request, timeout):
+            captured["url"] = request.full_url
+            captured["auth"] = request.get_header("Authorization")
+            captured["timeout"] = timeout
+            return FakeResponse()
+
+        with patch("urllib.request.urlopen", fake_urlopen):
+            snapshot = load_cloud_snapshot("https://example.worker.dev/dayflow/current", "read-token", "2026-06-16")
+
+        self.assertEqual(snapshot["source_status"], "ok")
+        self.assertEqual(snapshot["snapshot_date"], "2026-06-16")
+        self.assertEqual(captured["url"], "https://example.worker.dev/dayflow/current?date=2026-06-16")
+        self.assertEqual(captured["auth"], "Bearer read-token")
+        self.assertEqual(captured["timeout"], 30)
+
+    def test_load_inputs_prefers_cloud_snapshot_when_configured(self):
+        cloud_snapshot = {
+            "snapshot_date": "2026-06-16",
+            "source_status": "ok",
+            "counts": {"total": 1, "done": 1, "open": 0},
+            "done_tasks": [{"title": "论文任务", "domain": "paper", "priority": "high"}],
+            "open_tasks": [],
+        }
+
+        with patch.dict(
+            os.environ,
+            {
+                "DAYFLOW_CLOUD_ENDPOINT": "https://example.worker.dev/dayflow/current",
+                "DAYFLOW_READ_TOKEN": "read-token",
+            },
+            clear=False,
+        ), patch("send_morning_plan.load_cloud_snapshot", return_value=cloud_snapshot):
+            snapshot, phd = load_inputs()
+
+        self.assertEqual(snapshot, cloud_snapshot)
+        self.assertIn("mainlines", phd)
 
     def test_beijing_send_window_accepts_only_morning_calibration_window(self):
         self.assertTrue(is_beijing_send_window(datetime(2026, 6, 17, 1, 30, tzinfo=timezone.utc)))

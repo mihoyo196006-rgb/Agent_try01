@@ -62,6 +62,24 @@ def load_best_snapshot(dayflow_dir: Path, now: dt.datetime | None = None) -> dic
     return default
 
 
+def load_cloud_snapshot(endpoint: str, token: str | None = None, target_date: str | None = None) -> dict:
+    if target_date:
+        separator = "&" if "?" in endpoint else "?"
+        endpoint = f"{endpoint}{separator}date={urllib.parse.quote(target_date, safe='')}"
+    headers = {"Accept": "application/json"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    request = urllib.request.Request(endpoint, headers=headers, method="GET")
+    with urllib.request.urlopen(request, timeout=30) as response:
+        body = response.read().decode("utf-8", errors="replace")
+        if response.status >= 400:
+            raise RuntimeError(body)
+        snapshot = json.loads(body) if body else {}
+    if not isinstance(snapshot, dict):
+        raise RuntimeError("Dayflow cloud endpoint returned a non-object payload.")
+    return snapshot
+
+
 def is_fresh_snapshot(snapshot: dict, now: dt.datetime | None = None) -> bool:
     if snapshot.get("source_status") != "ok":
         return False
@@ -150,7 +168,17 @@ def write_delivery_marker(marker: dict, delivery_dir: Path = DELIVERY_DIR) -> Pa
 
 
 def load_inputs() -> tuple[dict, dict]:
-    snapshot = load_best_snapshot(DATA_DIR / "dayflow")
+    endpoint = os.environ.get("DAYFLOW_CLOUD_ENDPOINT", "").strip()
+    token = os.environ.get("DAYFLOW_READ_TOKEN", "").strip()
+    expected_date = (beijing_now().date() - dt.timedelta(days=1)).isoformat()
+    if endpoint:
+        try:
+            snapshot = load_cloud_snapshot(endpoint, token or None, expected_date)
+        except Exception as exc:
+            print(f"Dayflow cloud snapshot unavailable; falling back to local snapshot: {exc}", file=sys.stderr)
+            snapshot = load_best_snapshot(DATA_DIR / "dayflow")
+    else:
+        snapshot = load_best_snapshot(DATA_DIR / "dayflow")
     phd = load_json(
         DATA_DIR / "phd" / "mainline.json",
         {"mainlines": ["论文", "英语"], "paper": {}, "english": {}},
