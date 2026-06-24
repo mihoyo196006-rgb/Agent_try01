@@ -22,7 +22,7 @@ class MorningMessageTests(unittest.TestCase):
     def setUp(self):
         self._saved_env = {
             key: os.environ.get(key)
-            for key in ("DAYFLOW_TARGET_DATE", "GITHUB_EVENT_NAME", "MESSAGE_UUID_SUFFIX")
+            for key in ("DAYFLOW_MANUAL_RUN", "DAYFLOW_TARGET_DATE", "GITHUB_EVENT_NAME", "MESSAGE_UUID_SUFFIX")
         }
         for key in self._saved_env:
             os.environ.pop(key, None)
@@ -269,7 +269,7 @@ class MorningMessageTests(unittest.TestCase):
         self.assertEqual(captured["target_date"], "2026-06-24")
 
     def test_manual_dispatch_defaults_to_today_when_no_target_date_is_set(self):
-        with patch.dict(os.environ, {"GITHUB_EVENT_NAME": "workflow_dispatch"}, clear=False):
+        with patch.dict(os.environ, {"DAYFLOW_MANUAL_RUN": "1"}, clear=False):
             target = expected_snapshot_date(datetime(2026, 6, 24, 15, 30, tzinfo=timezone.utc))
 
         self.assertEqual(target, "2026-06-24")
