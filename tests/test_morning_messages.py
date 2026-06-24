@@ -19,6 +19,22 @@ from send_morning_plan import (
 
 
 class MorningMessageTests(unittest.TestCase):
+    def setUp(self):
+        self._saved_env = {
+            key: os.environ.get(key)
+            for key in ("DAYFLOW_TARGET_DATE", "GITHUB_EVENT_NAME", "MESSAGE_UUID_SUFFIX")
+        }
+        for key in self._saved_env:
+            os.environ.pop(key, None)
+        self.addCleanup(self._restore_env)
+
+    def _restore_env(self):
+        for key, value in self._saved_env.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
     def test_build_messages_returns_yesterday_summary_and_today_plan(self):
         snapshot = {
             "snapshot_date": "2026-06-16",
