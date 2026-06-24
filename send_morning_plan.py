@@ -113,6 +113,35 @@ def domain_summary_lines(tasks: list[dict], empty_text: str) -> list[str]:
     return [f"  - {DOMAIN_LABELS[domain]}：{count} 项" for domain, count in counts.items()]
 
 
+def task_title(task: dict) -> str:
+    title = str(task.get("title") or "").strip()
+    return title if title else "未命名任务"
+
+
+def tasks_by_domain(tasks: list[dict], domain: str) -> list[dict]:
+    return [task for task in tasks if task.get("domain") == domain]
+
+
+def format_titles(tasks: list[dict], empty_text: str, limit: int = 4) -> list[str]:
+    if not tasks:
+        return [f"  - {empty_text}"]
+    lines = [f"  - {task_title(task)}" for task in tasks[:limit]]
+    remaining = len(tasks) - limit
+    if remaining > 0:
+        lines.append(f"  - 另有 {remaining} 项未展开")
+    return lines
+
+
+def paper_progress_line(done_paper: list[dict], open_paper: list[dict]) -> str:
+    if done_paper and open_paper:
+        return f"论文有实质推进：完成 {len(done_paper)} 项，但仍有 {len(open_paper)} 项需要今天接上。"
+    if done_paper:
+        return f"论文有实质推进：完成 {len(done_paper)} 项，今天应把成果固化为文字或模型修改。"
+    if open_paper:
+        return f"论文昨天没有形成完成记录，仍有 {len(open_paper)} 项悬而未决，今天优先补上。"
+    return "昨天没有明确的论文任务记录，今天需要主动把主线拉回论文。"
+
+
 def infer_mainline_help(done_tasks: list[dict], phd: dict) -> str:
     domains = {task.get("domain") for task in done_tasks}
     paper_done = sum(1 for task in done_tasks if task.get("domain") == "paper")
@@ -138,22 +167,33 @@ def build_messages(snapshot: dict, phd: dict, now: dt.datetime | None = None) ->
     yesterday = snapshot.get("snapshot_date") or (bj_now.date() - dt.timedelta(days=1)).isoformat()
     counts = snapshot.get("counts", {})
     done_tasks = snapshot.get("done_tasks", [])
-    stale_prefix = f"{STALE_NOTICE}\n\n" if not is_fresh_snapshot(snapshot, now) else ""
-
-    summary = "\n".join(
-        [
-            *(["⚠️ 数据提醒", f"  {STALE_NOTICE}", ""] if stale_prefix else []),
-            f"🧾 昨日总结｜{yesterday}",
-            "",
-            "✅ Dayflow",
-            "  已完成：",
-            *domain_summary_lines(done_tasks, "暂无记录"),
-            "",
-            "🎯 对主线的帮助",
-            f"  {infer_mainline_help(done_tasks, phd)}",
-        ]
-    )
-    return [summary]
+    open_tasks = snapshot.get("open_tasks", [])
+    done_paper = tasks_by_domain(done_tasks, "paper")
+    open_paper = tasks_by_domain(open_tasks, "paper")
+    done_english = tasks_by_domain(done_tasks, "english")
+    open_english = tasks_by_domain(open_tasks, "english")
+    stale_lines = ["数据提醒", f"  {STALE_NOTICE}", ""] if not is_fresh_snapshot(snapshot, now) else []
+    return [
+        "\n".join(
+            [
+                *stale_lines,
+                f"昨日论文进展｜{yesterday}",
+                "",
+                "论文判断",
+                f"  {paper_progress_line(done_paper, open_paper)}",
+                "",
+                "已推进",
+                *format_titles(done_paper, "暂无论文完成记录"),
+                "",
+                "未完成/今日接力",
+                *format_titles(open_paper, "暂无论文遗留项"),
+                "",
+                "其他信号",
+                f"  英语：完成 {len(done_english)} 项，未完成 {len(open_english)} 项",
+                f"  DayFlow：共 {counts.get('total', 0)} 项，完成 {counts.get('done', 0)} 项，未完成 {counts.get('open', 0)} 项",
+            ]
+        )
+    ]
 
 
 def build_delivery_marker(snapshot: dict, results: list[dict], now: dt.datetime | None = None) -> dict:

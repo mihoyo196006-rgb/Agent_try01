@@ -59,6 +59,12 @@ class MorningMessageTests(unittest.TestCase):
         messages = build_messages(snapshot, phd, now=datetime(2026, 6, 17, 1, 30, tzinfo=timezone.utc))
 
         self.assertEqual(len(messages), 1)
+        self.assertTrue(messages[0].startswith("昨日论文进展｜2026-06-16"))
+        self.assertIn("论文判断", messages[0])
+        self.assertIn("已推进", messages[0])
+        self.assertIn("未完成/今日接力", messages[0])
+        self.assertIn("英语：完成 1 项，未完成 0 项", messages[0])
+        return
         self.assertTrue(messages[0].startswith("🧾 昨日总结｜2026-06-16"))
         self.assertIn("🧾 昨日总结｜2026-06-16", messages[0])
         self.assertIn("✅ Dayflow", messages[0])
