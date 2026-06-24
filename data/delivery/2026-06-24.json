@@ -1,0 +1,17 @@
+{
+  "date": "2026-06-24",
+  "sent_at_beijing": "2026-06-24T23:20:09+08:00",
+  "status": "sent",
+  "snapshot_date": "2026-06-23",
+  "snapshot_capture_kind": "main",
+  "counts": {
+    "total": 0,
+    "done": 0,
+    "open": 0
+  },
+  "source_file": "014544.log",
+  "source_modified_at": "2026-06-23T23:49:48.621555+08:00",
+  "message_ids": [
+    "om_x100b6c8b147424a4c4ec34225d3a040"
+  ]
+}
