@@ -12,7 +12,7 @@ DATA_DIR = Path(__file__).resolve().parent / "data"
 DELIVERY_DIR = DATA_DIR / "delivery"
 STALE_NOTICE = "未收到昨晚 Dayflow 新快照，以下基于最近一次快照和 PhD 主线生成。"
 DIVIDER = "──────"
-SEND_WINDOW_START = dt.time(9, 30)
+SEND_WINDOW_START = dt.time(9, 0)
 SEND_WINDOW_END = dt.time(10, 30, 59)
 DOMAIN_LABELS = {"paper": "论文", "english": "英语", "other": "其他"}
 
