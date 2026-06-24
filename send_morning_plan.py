@@ -182,14 +182,9 @@ def load_inputs() -> tuple[dict, dict]:
     endpoint = os.environ.get("DAYFLOW_CLOUD_ENDPOINT", "").strip()
     token = os.environ.get("DAYFLOW_READ_TOKEN", "").strip()
     expected_date = expected_snapshot_date()
-    if endpoint:
-        try:
-            snapshot = load_cloud_snapshot(endpoint, token or None, expected_date)
-        except Exception as exc:
-            print(f"Dayflow cloud snapshot unavailable; falling back to local snapshot: {exc}", file=sys.stderr)
-            snapshot = load_best_snapshot(DATA_DIR / "dayflow")
-    else:
-        snapshot = load_best_snapshot(DATA_DIR / "dayflow")
+    if not endpoint:
+        raise RuntimeError("DAYFLOW_CLOUD_ENDPOINT is required; local Dayflow snapshot fallback is disabled.")
+    snapshot = load_cloud_snapshot(endpoint, token or None, expected_date)
     phd = load_json(
         DATA_DIR / "phd" / "mainline.json",
         {"mainlines": ["论文", "英语"], "paper": {}, "english": {}},

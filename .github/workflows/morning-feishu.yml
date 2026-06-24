@@ -2,12 +2,7 @@ name: Morning Feishu Plan
 
 on:
   schedule:
-    - cron: "30 20 * * *"
-    - cron: "30 21 * * *"
-    - cron: "30 22 * * *"
-    - cron: "30 23 * * *"
-    - cron: "30 0 * * *"
-    - cron: "30 1 * * *"
+    - cron: "0 1 * * *"
   workflow_dispatch:
     inputs:
       target_date:
@@ -34,7 +29,7 @@ jobs:
         run: |
           echo "event=${GITHUB_EVENT_NAME}"
           echo "sha=${GITHUB_SHA}"
-          echo "dayflow_target_date=${DAYFLOW_TARGET_DATE:-<default-yesterday>}"
+          echo "dayflow_target_date=${DAYFLOW_TARGET_DATE:-<default>}"
           echo "utc_now=$(date -u --iso-8601=seconds)"
           TZ=Asia/Shanghai date +"beijing_now=%Y-%m-%dT%H:%M:%S%z"
         env:
@@ -47,7 +42,7 @@ jobs:
         run: node --test tests/dayflow_cloud_worker.test.mjs
       - name: Run lightweight scheduled check
         if: github.event_name == 'schedule'
-        run: python -m py_compile send_morning_plan.py read_dayflow_state.py build_phd_mainline.py
+        run: python -m py_compile send_morning_plan.py build_phd_mainline.py
       - name: Send morning plan to Feishu
         env:
           FEISHU_APP_ID: cli_aaa0102e6a38dcff

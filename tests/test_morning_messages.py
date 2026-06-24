@@ -240,6 +240,23 @@ class MorningMessageTests(unittest.TestCase):
         self.assertEqual(snapshot, cloud_snapshot)
         self.assertIn("mainlines", phd)
 
+    def test_load_inputs_requires_cloud_endpoint(self):
+        with patch.dict(os.environ, {}, clear=True):
+            with self.assertRaisesRegex(RuntimeError, "DAYFLOW_CLOUD_ENDPOINT is required"):
+                load_inputs()
+
+    def test_load_inputs_does_not_fall_back_to_local_snapshot_when_cloud_fails(self):
+        with patch.dict(
+            os.environ,
+            {
+                "DAYFLOW_CLOUD_ENDPOINT": "https://example.worker.dev/dayflow/current",
+                "DAYFLOW_READ_TOKEN": "read-token",
+            },
+            clear=False,
+        ), patch("send_morning_plan.load_cloud_snapshot", side_effect=RuntimeError("cloud down")):
+            with self.assertRaisesRegex(RuntimeError, "cloud down"):
+                load_inputs()
+
     def test_load_inputs_uses_manual_target_date_when_configured(self):
         cloud_snapshot = {
             "snapshot_date": "2026-06-24",

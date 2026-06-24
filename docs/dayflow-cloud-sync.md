@@ -1,6 +1,6 @@
 # Dayflow Cloud Sync
 
-This setup keeps Dayflow local-first, but sends compact task snapshots to a free Cloudflare Worker + KV endpoint whenever Dayflow saves state. GitHub Actions reads that endpoint at the morning send time and falls back to `data/dayflow/*.json` if the cloud endpoint is not configured or unavailable.
+This setup keeps Dayflow local-first, but sends compact task snapshots to a free Cloudflare Worker + KV endpoint whenever Dayflow saves state. GitHub Actions reads only that endpoint at the morning send time. The old local snapshot commit/push fallback is disabled to avoid duplicate data paths.
 
 ## Files
 
@@ -13,7 +13,7 @@ This setup keeps Dayflow local-first, but sends compact task snapshots to a free
 
 ## Cloudflare Free Plan Fit
 
-For one personal Dayflow instance, the free tier is enough. Workers Free allows 100,000 requests per day. Workers KV is available on the Free plan, with 100,000 reads per day, 1,000 writes per day, and 1 GB stored data. Dayflow usually writes only when tasks change, and GitHub reads once during the morning send window.
+For one personal Dayflow instance, the free tier is enough. Workers Free allows 100,000 requests per day. Workers KV is available on the Free plan, with 100,000 reads per day, 1,000 writes per day, and 1 GB stored data. Dayflow writes are debounced and unchanged payloads are skipped, so repeated saves of the same task state do not write KV again. GitHub reads once at the 09:00 Beijing send.
 
 ## Deploy Worker
 
@@ -65,7 +65,7 @@ window.DayflowCloudSync.configure({
 });
 ```
 
-The next Dayflow save will POST a compact payload. It uploads both today's and yesterday's dated snapshots so the 09:00 GitHub job can request yesterday even if Dayflow was already edited this morning.
+The next Dayflow save will POST a compact payload. It uploads both today's and yesterday's dated snapshots so the 09:00 GitHub job can request yesterday even if Dayflow was already edited this morning. Repeated saves with unchanged task content are skipped locally.
 
 To disable sync:
 
