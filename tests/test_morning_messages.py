@@ -223,6 +223,34 @@ class MorningMessageTests(unittest.TestCase):
         self.assertEqual(snapshot, cloud_snapshot)
         self.assertIn("mainlines", phd)
 
+    def test_load_inputs_uses_manual_target_date_when_configured(self):
+        cloud_snapshot = {
+            "snapshot_date": "2026-06-24",
+            "source_status": "ok",
+            "counts": {"total": 7, "done": 6, "open": 1},
+            "done_tasks": [],
+            "open_tasks": [],
+        }
+        captured = {}
+
+        def fake_load_cloud_snapshot(endpoint, token, target_date):
+            captured["target_date"] = target_date
+            return cloud_snapshot
+
+        with patch.dict(
+            os.environ,
+            {
+                "DAYFLOW_CLOUD_ENDPOINT": "https://example.worker.dev/dayflow/current",
+                "DAYFLOW_READ_TOKEN": "read-token",
+                "DAYFLOW_TARGET_DATE": "2026-06-24",
+            },
+            clear=False,
+        ), patch("send_morning_plan.load_cloud_snapshot", fake_load_cloud_snapshot):
+            snapshot, _phd = load_inputs()
+
+        self.assertEqual(snapshot, cloud_snapshot)
+        self.assertEqual(captured["target_date"], "2026-06-24")
+
     def test_beijing_send_window_accepts_only_morning_calibration_window(self):
         self.assertTrue(is_beijing_send_window(datetime(2026, 6, 17, 1, 30, tzinfo=timezone.utc)))
         self.assertTrue(is_beijing_send_window(datetime(2026, 6, 17, 1, 50, tzinfo=timezone.utc)))
@@ -238,6 +266,13 @@ class MorningMessageTests(unittest.TestCase):
 
         self.assertEqual(uuids, ["morning-feishu-2026-06-17-1", "morning-feishu-2026-06-17-2"])
         self.assertLessEqual(max(len(value) for value in uuids), 64)
+
+    def test_message_uuids_can_include_manual_suffix(self):
+        with patch.dict(os.environ, {"MESSAGE_UUID_SUFFIX": "28111084745"}, clear=False):
+            uuids = build_message_uuids(datetime(2026, 6, 17, 1, 30, tzinfo=timezone.utc), 1)
+
+        self.assertEqual(uuids, ["morning-feishu-2026-06-17-1-28111084745"])
+        self.assertLessEqual(len(uuids[0]), 64)
 
     def test_build_message_url_adds_uuid_when_present(self):
         url = build_message_url("morning-feishu-2026-06-17-1")

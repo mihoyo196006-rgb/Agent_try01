@@ -29,9 +29,19 @@ def is_beijing_send_window(now: dt.datetime | None = None) -> bool:
     return SEND_WINDOW_START <= current_time <= SEND_WINDOW_END
 
 
+def expected_snapshot_date(now: dt.datetime | None = None) -> str:
+    override = os.environ.get("DAYFLOW_TARGET_DATE", "").strip()
+    if override:
+        return override
+    return (beijing_now(now).date() - dt.timedelta(days=1)).isoformat()
+
+
 def build_message_uuids(now: dt.datetime | None, count: int) -> list[str]:
     today = beijing_now(now).date().isoformat()
-    return [f"morning-feishu-{today}-{index}" for index in range(1, count + 1)]
+    suffix = os.environ.get("MESSAGE_UUID_SUFFIX", "").strip()
+    if suffix:
+        suffix = "-" + suffix[:24]
+    return [f"morning-feishu-{today}-{index}{suffix}" for index in range(1, count + 1)]
 
 
 def build_message_url(message_uuid: str | None = None) -> str:
@@ -83,8 +93,7 @@ def load_cloud_snapshot(endpoint: str, token: str | None = None, target_date: st
 def is_fresh_snapshot(snapshot: dict, now: dt.datetime | None = None) -> bool:
     if snapshot.get("source_status") != "ok":
         return False
-    expected_date = (beijing_now(now).date() - dt.timedelta(days=1)).isoformat()
-    return snapshot.get("snapshot_date") == expected_date
+    return snapshot.get("snapshot_date") == expected_snapshot_date(now)
 
 
 def aggregate_domains(tasks: list[dict]) -> dict[str, int]:
@@ -170,7 +179,7 @@ def write_delivery_marker(marker: dict, delivery_dir: Path = DELIVERY_DIR) -> Pa
 def load_inputs() -> tuple[dict, dict]:
     endpoint = os.environ.get("DAYFLOW_CLOUD_ENDPOINT", "").strip()
     token = os.environ.get("DAYFLOW_READ_TOKEN", "").strip()
-    expected_date = (beijing_now().date() - dt.timedelta(days=1)).isoformat()
+    expected_date = expected_snapshot_date()
     if endpoint:
         try:
             snapshot = load_cloud_snapshot(endpoint, token or None, expected_date)

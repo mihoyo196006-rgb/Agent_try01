@@ -9,6 +9,11 @@ on:
     - cron: "30 0 * * *"
     - cron: "30 1 * * *"
   workflow_dispatch:
+    inputs:
+      target_date:
+        description: "Optional DayFlow snapshot date to read, YYYY-MM-DD. Leave blank for yesterday."
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -47,6 +52,8 @@ jobs:
           FEISHU_USER_ID: ou_bcd723dafdadfc604e0b66b4e8bb9f32
           DAYFLOW_CLOUD_ENDPOINT: ${{ secrets.DAYFLOW_CLOUD_ENDPOINT }}
           DAYFLOW_READ_TOKEN: ${{ secrets.DAYFLOW_READ_TOKEN }}
+          DAYFLOW_TARGET_DATE: ${{ inputs.target_date }}
+          MESSAGE_UUID_SUFFIX: ${{ github.event_name == 'workflow_dispatch' && github.run_id || '' }}
           REQUIRE_BEIJING_SEND_WINDOW: ${{ github.event_name == 'schedule' && '1' || '0' }}
         run: python send_morning_plan.py
       - name: Commit delivery marker
