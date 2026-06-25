@@ -2,6 +2,13 @@ name = "dayflow-cloud-sync"
 main = "dayflow-worker.mjs"
 compatibility_date = "2026-06-24"
 
+[triggers]
+crons = ["0 1 * * *", "10 1 * * *", "20 1 * * *"]
+
+[vars]
+FEISHU_APP_ID = "cli_aaa0102e6a38dcff"
+FEISHU_USER_ID = "replace_with_feishu_open_id"
+
 [[kv_namespaces]]
 binding = "DAYFLOW_KV"
 id = "replace_with_cloudflare_kv_namespace_id"

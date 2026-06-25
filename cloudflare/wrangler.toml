@@ -4,6 +4,13 @@ compatibility_date = "2026-06-24"
 workers_dev = true
 preview_urls = false
 
+[triggers]
+crons = ["0 1 * * *", "10 1 * * *", "20 1 * * *"]
+
+[vars]
+FEISHU_APP_ID = "cli_aaa0102e6a38dcff"
+FEISHU_USER_ID = "ou_bcd723dafdadfc604e0b66b4e8bb9f32"
+
 [[kv_namespaces]]
 binding = "DAYFLOW_KV"
 id = "b5d17d34ec58419492f68f1325f94858"
