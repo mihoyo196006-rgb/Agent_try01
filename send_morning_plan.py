@@ -283,10 +283,6 @@ def main() -> int:
         print(f"Beijing now: {bj_now.isoformat()}")
         print(f"GitHub event: {os.environ.get('GITHUB_EVENT_NAME', '')}")
         print(f"GitHub sha: {os.environ.get('GITHUB_SHA', '')}")
-        if os.environ.get("REQUIRE_BEIJING_SEND_WINDOW", "").strip() == "1" and not is_beijing_send_window(now):
-            print("Outside Beijing send window; skip Feishu delivery for calibration run.")
-            return 0
-
         token = get_tenant_access_token(app_id, app_secret)
         snapshot, phd = load_inputs()
         messages = build_messages(snapshot, phd, now=now)

@@ -53,7 +53,6 @@ jobs:
           DAYFLOW_TARGET_DATE: ${{ github.event.inputs.target_date }}
           DAYFLOW_MANUAL_RUN: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
           MESSAGE_UUID_SUFFIX: ${{ github.event_name == 'workflow_dispatch' && github.run_id || '' }}
-          REQUIRE_BEIJING_SEND_WINDOW: ${{ github.event_name == 'schedule' && '1' || '0' }}
         run: python send_morning_plan.py
       - name: Commit delivery marker
         if: success()
